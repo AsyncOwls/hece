@@ -1,5 +1,6 @@
 import { ALL_TABLES, wordPool, type Table, type Word } from '../data/curriculum';
 import { parseCustomWords } from '../data/custom';
+import { SENTENCES, parseCustomSentences } from '../data/sentences';
 import { lowerTr } from '../data/syllabify';
 import type { Settings } from '../settings';
 
@@ -42,6 +43,13 @@ export function gameBank(s: Settings): string[] {
   const set = new Set(s.useTable && last ? syllableBank(last) : []);
   for (const w of mine(s)) w.syllables.forEach((x) => set.add(lowerTr(x)));
   return [...set];
+}
+
+/** Cümle Okuyorum havuzu: hazır cümleler ve/veya öğretmenin cümleleri (sırası sahnede karıştırılır). */
+export function sentencePool(s: Settings): string[] {
+  const builtIn = s.sentBuiltIn ? SENTENCES : [];
+  const mine = s.sentMine ? parseCustomSentences(s.customSentences).sentences : [];
+  return [...new Set([...builtIn, ...mine])];
 }
 
 export function capitalizeTr(s: string) {

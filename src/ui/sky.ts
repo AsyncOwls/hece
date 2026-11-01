@@ -1,5 +1,5 @@
 import { Container, Graphics, Ticker } from 'pixi.js';
-import { H, W } from '../theme';
+import { H, W, mix } from '../theme';
 import { tween } from '../tween';
 
 export const SKY = {
@@ -163,9 +163,4 @@ export class Rainbow extends Graphics {
     this.progress = 0;
     this.draw();
   }
-}
-
-function mix(a: number, b: number, t: number): number {
-  const ch = (s: number) => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t);
-  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
 }

@@ -1,5 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { C, darken, label } from '../theme';
+import { C, darken, label, mix } from '../theme';
 import { sfx } from '../audio';
 import { tween } from '../tween';
 
@@ -15,6 +15,10 @@ export interface ButtonOptions {
   icon?: Graphics;
   /** Dolu yerine beyaz zemin + renkli kenar. */
   outline?: boolean;
+  /** Seçili olmayan seçenek: rengin çok açık tonu, çerçevesiz ve gölgesiz. */
+  soft?: boolean;
+  /** Gölgesiz (ikincil düğmeler için). */
+  flat?: boolean;
   onTap: () => void;
 }
 
@@ -49,7 +53,7 @@ export class Button extends Container {
   }
 
   private fg() {
-    return this.opts.textColor ?? (this.opts.outline ? this.opts.color : C.white);
+    return this.opts.textColor ?? (this.opts.outline || this.opts.soft ? this.opts.color : C.white);
   }
 
   private layoutContent() {
@@ -63,10 +67,14 @@ export class Button extends Container {
   }
 
   private draw() {
-    const { width: w, height: h, color, outline } = this.opts;
+    const { width: w, height: h, color, outline, soft, flat } = this.opts;
     const r = this.opts.radius ?? 28;
     this.bg.clear();
-    this.bg.roundRect(-w / 2, -h / 2 + 7, w, h, r).fill(darken(color, outline ? 0.9 : 0.7));
+    if (soft) {
+      this.bg.roundRect(-w / 2, -h / 2, w, h, r).fill(mix(color, C.white, 0.87));
+      return;
+    }
+    if (!flat) this.bg.roundRect(-w / 2, -h / 2 + 7, w, h, r).fill(darken(color, outline ? 0.9 : 0.7));
     if (outline) {
       this.bg.roundRect(-w / 2, -h / 2, w, h, r).fill(C.white).stroke({ width: 5, color });
     } else {

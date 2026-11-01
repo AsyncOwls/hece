@@ -49,6 +49,7 @@ export const sfx = {
     tone(150, 0.12, 0.22, 'square', 0.08);
   },
   win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.3, 'triangle', 0.16)),
+  bubble: () => [0, 0.07, 0.15].forEach((at, i) => tone(500 + i * 260, at, 0.09, 'sine', 0.12)),
 };
 
 // --- Sesli okuma (tarayıcının Türkçe sesi varsa) ---
@@ -89,6 +90,8 @@ if ('speechSynthesis' in window) {
 /** Kullanılabilir Türkçe sesler, en iyisi başta. */
 export const turkishVoices = () => voices;
 export const currentVoice = () => voice;
+/** Sesli okuma şu an yapılabilir mi (ayar açık ve Türkçe ses var). */
+export const canRead = () => voice !== null && mode === 'on';
 
 /** Ses listesi değişince haber verir; aboneliği bırakan fonksiyonu döner. */
 export function onVoicesChanged(f: () => void): () => void {

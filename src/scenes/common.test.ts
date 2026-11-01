@@ -1,21 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_TABLES } from '../data/curriculum';
-import type { Settings } from '../settings';
-import { gameBank, gamePool, syllableBank } from './common';
+import { SENTENCES } from '../data/sentences';
+import { DEFAULTS, type Settings } from '../settings';
+import { gameBank, gamePool, sentencePool, syllableBank } from './common';
 
-const base: Settings = {
-  tables: [0],
-  useTable: true,
-  useMine: false,
-  customWords: '',
-  proper: true,
-  distractors: 2,
-  showWord: false,
-  oneColor: false,
-  roundSize: 10,
-  sound: 'on',
-  voice: '',
-};
+const base: Settings = { ...DEFAULTS, tables: [0] };
+
+describe('sentencePool', () => {
+  it('combines the built-in and teacher sentences, independent of the letter tables', () => {
+    const s = { ...base, tables: [20], sentMine: true, customSentences: 'Kedi süt içti.\nBalık yüzdü.\nTan nane at.' };
+    expect(sentencePool(s)).toEqual([...SENTENCES, 'Kedi süt içti.', 'Balık yüzdü.']);
+    expect(sentencePool({ ...s, sentBuiltIn: false })).toEqual(['Kedi süt içti.', 'Balık yüzdü.', 'Tan nane at.']);
+    expect(sentencePool({ ...s, sentMine: false })).toEqual(SENTENCES);
+  });
+});
 
 describe('gamePool', () => {
   it('mixes words from tables in different sound groups', () => {

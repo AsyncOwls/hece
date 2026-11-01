@@ -1,6 +1,8 @@
 import type { SoundMode } from './audio';
 
 export interface Settings {
+  /** Menüde açık bölüm. */
+  tab: 'syllable' | 'sentence';
   /** Seçili tablolar (ALL_TABLES sırası); farklı ses gruplarından karışık olabilir. */
   tables: number[];
   /** Harf tablosunun kelimeleri kullanılsın. */
@@ -19,6 +21,14 @@ export interface Settings {
   oneColor: boolean;
   /** Bir turdaki kelime sayısı. */
   roundSize: number;
+  /** Cümle Okuyorum: seçili harflerle okunabilen hazır cümleler kullanılsın. */
+  sentBuiltIn: boolean;
+  /** Cümle Okuyorum: öğretmenin kendi cümleleri kullanılsın. */
+  sentMine: boolean;
+  /** Öğretmenin cümleleri, her satırda bir tane. */
+  customSentences: string;
+  /** Cümle Okuyorum'da akvaryumdaki balık sayısı. */
+  creatures: number;
   sound: SoundMode;
   /** Seçilen okuma sesinin adı; boşsa en iyi Türkçe ses. */
   voice: string;
@@ -26,7 +36,8 @@ export interface Settings {
 
 const KEY = 'hece.settings.v1';
 
-const DEFAULTS: Settings = {
+export const DEFAULTS: Settings = {
+  tab: 'syllable',
   tables: [0],
   useTable: true,
   useMine: false,
@@ -36,6 +47,10 @@ const DEFAULTS: Settings = {
   showWord: false,
   oneColor: false,
   roundSize: 10,
+  sentBuiltIn: true,
+  sentMine: false,
+  customSentences: '',
+  creatures: 6,
   sound: 'on',
   voice: '',
 };

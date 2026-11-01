@@ -26,6 +26,23 @@ yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomat
   "Hedef kelime: Bulutta soluk" seçilirse heceler bulutların içinde soluk yazılı görünür.
 - Menüye dönmek için sağ üstteki soluk çarka **basılı tutun** (çocuklar yanlışlıkla açmasın diye).
 
+### Cümle Okuyorum
+
+Menünün üstündeki **Cümle Okuyorum** sekmesinden açılır. İki sayfa vardır:
+
+- **Akvaryum:** Renk renk balıklar yüzer.
+- **Kediler:** Bir ev ve bahçe resmi; kediler bacada, pencerelerde, duvarda, ağaç dalında ve kutuda oturur.
+
+Bir balığa ya da kediye dokununca ayrı bir cümle büyük yazıyla çıkar. Çocuk okuyup ✓'e basar,
+o hayvanın üstünde yıldız belirir; hepsi okununca "Aferin!" gelir. Ses açıksa hoparlör düğmesi
+cümleyi, cümledeki bir kelimeye dokunmak o kelimeyi okur.
+
+- **Hazır cümleler:** Seçili tablolara kadar öğrenilen harflerle okunabilen cümleler (`src/data/sentences.ts`;
+  her cümle harflerine göre kendiliğinden doğru tabloya yerleşir). Önce seçili tablolarla okunabilir hale
+  gelen cümleler gelir.
+- **Benim cümlelerim:** Öğretmen her satıra bir cümle yazar; bunlar her zaman önce gelir.
+- Ekrandaki balık/kedi sayısı 4, 6 ya da 8 seçilebilir.
+
 Okuma kalitesi tarayıcının Türkçe sesine bağlıdır. En doğal sesler: Microsoft Edge'de
 "Emel Online (Natural)", macOS'ta Sistem Ayarları → Erişilebilirlik → Seslendirilen İçerik
 bölümünden indirilen "Yelda (Gelişmiş/Premium)". Oyun bu sesleri varsa kendiliğinden seçer.

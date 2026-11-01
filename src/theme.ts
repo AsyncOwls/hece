@@ -32,6 +32,12 @@ export function darken(color: number, f = 0.75): number {
   return (r << 16) | (g << 8) | b;
 }
 
+/** İki rengin karışımı: t=0 → a, t=1 → b. */
+export function mix(a: number, b: number, t: number): number {
+  const ch = (s: number) => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
 let textResolution = 1;
 
 /** Sahne büyütüldüğünde yazılar bulanık olmasın diye çözünürlüğü günceller. */
