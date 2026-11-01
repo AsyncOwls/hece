@@ -28,20 +28,15 @@ yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomat
 
 ### Cümle Okuyorum
 
-Menünün üstündeki **Cümle Okuyorum** sekmesinden açılır. İki sayfa vardır:
+Menünün üstündeki **Cümle Okuyorum** sekmesinden açılır. Ekranda büyük bir akvaryum ve renk renk
+balıklar vardır. Hangi balığa dokunulursa dokunulsun havuzdan **yeni bir cümle** büyük yazıyla çıkar;
+çocuk okuyup ✓'e basar. Havuzdaki cümleler bitene kadar hiçbiri tekrar gelmez, bitince "Aferin!" gelir.
+Ses açıksa hoparlör düğmesi cümleyi, cümledeki bir kelimeye dokunmak o kelimeyi okur.
 
-- **Akvaryum:** Renk renk balıklar yüzer.
-- **Kediler:** Bir ev ve bahçe resmi; kediler bacada, pencerelerde, duvarda, ağaç dalında ve kutuda oturur.
-
-Bir balığa ya da kediye dokununca ayrı bir cümle büyük yazıyla çıkar. Çocuk okuyup ✓'e basar,
-o hayvanın üstünde yıldız belirir; hepsi okununca "Aferin!" gelir. Ses açıksa hoparlör düğmesi
-cümleyi, cümledeki bir kelimeye dokunmak o kelimeyi okur.
-
-- **Hazır cümleler:** Seçili tablolara kadar öğrenilen harflerle okunabilen cümleler (`src/data/sentences.ts`;
-  her cümle harflerine göre kendiliğinden doğru tabloya yerleşir). Önce seçili tablolarla okunabilir hale
-  gelen cümleler gelir.
-- **Benim cümlelerim:** Öğretmen her satıra bir cümle yazar; bunlar her zaman önce gelir.
-- Ekrandaki balık/kedi sayısı 4, 6 ya da 8 seçilebilir.
+- **Hazır cümleler:** Öğretmenin verdiği fişlerdeki cümleler (şu an ANETİL fişi, 40 cümle;
+  `src/data/sentences.ts`). Harf tablosu seçiminden bağımsızdır.
+- **Benim cümlelerim:** Öğretmen her satıra bir cümle yazar. İkisi de açıksa aynı havuzda karışır.
+- Akvaryumdaki balık sayısı 4, 6 ya da 8 seçilebilir.
 
 Okuma kalitesi tarayıcının Türkçe sesine bağlıdır. En doğal sesler: Microsoft Edge'de
 "Emel Online (Natural)", macOS'ta Sistem Ayarları → Erişilebilirlik → Seslendirilen İçerik
