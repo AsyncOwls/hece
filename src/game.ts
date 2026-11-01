@@ -13,8 +13,6 @@ export class Game {
   /** W×H sanal alan; pencereye sığacak şekilde ölçeklenir. */
   readonly root = new Container();
   settings: Settings = loadSettings();
-  /** Bu oturumda toplanan yıldızlar. */
-  stars = 0;
   private scene?: Scene;
   private backdrop = new Graphics();
 
