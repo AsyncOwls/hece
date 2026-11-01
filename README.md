@@ -41,6 +41,14 @@ Ses açıksa hoparlör düğmesi cümleyi, cümledeki bir kelimeye dokunmak o ke
   aynı havuzda karışır.
 - Akvaryumdaki balık sayısı 4, 6 ya da 8 seçilebilir.
 
+### Adres Ver (paylaşılan oyun)
+
+"Oyunu Başlat" / "Akvaryum" düğmesinin yanındaki **Adres Ver**, o anki bölümün ayarlarını ve öğretmenin
+işaretli kelime/cümlelerini tek bir adrese gömer: `play.html?data=…` (veri, URL'ye uygun base64'te JSON).
+Adresi açan kişi öğretmen menüsünü görmeden, büyük ▶ düğmesine dokunarak doğrudan o oyunu oynar; çark ve
+Esc menüye götürmez. Bu sayfa hiçbir şey kaydetmez (öğretmenin tarayıcısındaki kayıtlar etkilenmez).
+Okuma sesi cihaza özel olduğu için adrese girmez; açılan cihazdaki en iyi Türkçe ses kullanılır.
+
 Öğretmenin kelime ve cümleleri tarayıcıda saklanır (aynı bilgisayar ve tarayıcıda kalıcıdır).
 
 Okuma kalitesi tarayıcının Türkçe sesine bağlıdır. En doğal sesler: Microsoft Edge'de

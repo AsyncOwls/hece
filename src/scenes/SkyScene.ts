@@ -13,7 +13,6 @@ import { C, CARD_COLORS, H, W, label, shuffle } from '../theme';
 import { easeOutBack, shake, tween, wait } from '../tween';
 import { sfx, speak } from '../audio';
 import { capitalizeTr, gameBank, gamePool } from './common';
-import { MenuScene } from './MenuScene';
 
 const CLOUD_Y = 420;
 const CLOUD_H = 230;
@@ -100,9 +99,6 @@ export class SkyScene implements Scene {
     this.words = shuffle(pool).slice(0, s.roundSize);
     this.bank = gameBank(s);
 
-    const gear = new TeacherGear(() => this.toMenu());
-    gear.position.set(W - 70, 70);
-
     this.view.addChild(
       new SkyBackdrop(),
       this.rainbow,
@@ -112,8 +108,13 @@ export class SkyScene implements Scene {
       this.cardLayer,
       this.overlay,
       this.dragLayer,
-      gear,
     );
+    // Öğretmen menüsüne dönüş (paylaşılan oyunda menü yok).
+    if (game.home) {
+      const gear = new TeacherGear(() => this.toMenu());
+      gear.position.set(W - 70, 70);
+      this.view.addChild(gear);
+    }
 
     this.dragger = new Dragger(this.view, this.dragLayer, {
       canDrag: (c) => !this.done && !this.slots.some((s) => s.card === c),
@@ -124,7 +125,7 @@ export class SkyScene implements Scene {
 
     if (this.words.length === 0) {
       // Çocuk ekranında yazı olmasın diye yalnızca öğretmene yönelik kısa bir not.
-      const t = label('Bu seçimle kelime yok.\nAyarlar için sağ üstteki çarka basılı tutun.', 52, C.ink);
+      const t = label(`Bu seçimle kelime yok.${game.home ? '\nAyarlar için sağ üstteki çarka basılı tutun.' : ''}`, 52, C.ink);
       t.position.set(W / 2, CLOUD_Y);
       this.overlay.addChild(t);
       return;
@@ -342,7 +343,7 @@ export class SkyScene implements Scene {
   }
 
   private toMenu() {
-    this.game.go((g) => new MenuScene(g));
+    this.game.goHome();
   }
 
   onKey(e: KeyboardEvent) {

@@ -9,13 +9,28 @@ export interface Scene {
   destroy(): void;
 }
 
+export interface GameOptions {
+  /** Verilmezse tarayıcıda kayıtlı öğretmen ayarları. */
+  settings?: Settings;
+  /** Ayar değişiklikleri tarayıcıya kaydedilsin mi (paylaşılan oyunda hayır). */
+  persist?: boolean;
+}
+
 export class Game {
   readonly app = new Application();
   /** W×H sanal alan; pencereye sığacak şekilde ölçeklenir. */
   readonly root = new Container();
-  settings: Settings = loadSettings();
+  settings: Settings;
+  /** Öğretmen menüsü; paylaşılan oyun sayfasında (play.html) yoktur. */
+  home?: (game: Game) => Scene;
+  private persist: boolean;
   private scene?: Scene;
   private backdrop = new Graphics();
+
+  constructor(opts: GameOptions = {}) {
+    this.settings = opts.settings ?? loadSettings();
+    this.persist = opts.persist ?? true;
+  }
 
   async init() {
     await this.app.init({
@@ -69,8 +84,13 @@ export class Game {
     this.layout();
   }
 
+  /** Menü varsa ona döner. */
+  goHome() {
+    if (this.home) this.go(this.home);
+  }
+
   save() {
-    saveSettings(this.settings);
+    if (this.persist) saveSettings(this.settings);
     configureAudio(this.settings);
   }
 

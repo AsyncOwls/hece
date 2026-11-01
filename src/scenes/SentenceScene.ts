@@ -10,7 +10,6 @@ import { C, H, W, label, shuffle } from '../theme';
 import { easeOutBack, tween, wait } from '../tween';
 import { canRead, sfx, speak } from '../audio';
 import { sentencePool } from './common';
-import { MenuScene } from './MenuScene';
 
 const FONT_SIZE = 96;
 const LINE_H = 132;
@@ -43,12 +42,16 @@ export class SentenceScene implements Scene {
       layer.addChild(c);
       c.on('pointertap', () => this.open(i));
     });
-    const gear = new TeacherGear(() => this.toMenu());
-    gear.position.set(W - 70, 70);
-    this.view.addChild(habitat.back, layer, habitat.front, this.overlay, gear);
+    this.view.addChild(habitat.back, layer, habitat.front, this.overlay);
+    // Öğretmen menüsüne dönüş (paylaşılan oyunda menü yok).
+    if (game.home) {
+      const gear = new TeacherGear(() => this.toMenu());
+      gear.position.set(W - 70, 70);
+      this.view.addChild(gear);
+    }
 
     if (this.queue.length === 0) {
-      const t = label('Bu seçimle cümle yok.\nAyarlar için sağ üstteki çarka basılı tutun.', 52, C.ink);
+      const t = label(`Bu seçimle cümle yok.${game.home ? '\nAyarlar için sağ üstteki çarka basılı tutun.' : ''}`, 52, C.ink);
       const bg = new Graphics().roundRect(-620, -110, 1240, 220, 32).fill({ color: 0xffffff, alpha: 0.92 });
       bg.position.set(W / 2, CARD_Y);
       t.position.set(W / 2, CARD_Y);
@@ -182,7 +185,7 @@ export class SentenceScene implements Scene {
   }
 
   private toMenu() {
-    this.game.go((g) => new MenuScene(g));
+    this.game.goHome();
   }
 
   onKey(e: KeyboardEvent) {

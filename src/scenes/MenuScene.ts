@@ -6,6 +6,8 @@ import { SENTENCE_SETS, SENTENCES, parseCustomSentences } from '../data/sentence
 import { Button } from '../ui/Button';
 import { fishIcon, fullscreenIcon, playIcon } from '../ui/icons';
 import { openListEditor } from '../ui/ListEditor';
+import { openShareDialog } from '../ui/ShareDialog';
+import { shareUrl } from '../share';
 import { C, GROUP_COLORS, W, label, mix } from '../theme';
 import { lowerTr } from '../data/syllabify';
 import { currentVoice, onVoicesChanged, sfx, speak, turkishVoices, type SoundMode } from '../audio';
@@ -234,15 +236,16 @@ export class MenuScene implements Scene {
 
     const n = gamePool(s).length;
     const play = new Button({
-      width: 440,
+      width: 370,
       height: 100,
       color: n > 0 ? C.green : C.line,
       text: 'Oyunu Başlat',
-      fontSize: 46,
-      icon: playIcon(C.white, 18),
+      fontSize: 42,
+      icon: playIcon(C.white, 17),
       onTap: () => this.startSyllables(),
     });
-    play.position.set(1565, OPTIONS_Y);
+    play.position.set(1455, OPTIONS_Y);
+    this.drawShare(n > 0, 'Hece Birleştir');
     const info = label(n > 0 ? `Bu seçimle ${n} kelime var` : 'Bu seçimle kelime yok', 26, n > 0 ? C.muted : C.red, {
       fontWeight: '400',
     });
@@ -296,15 +299,16 @@ export class MenuScene implements Scene {
 
     const n = sentencePool(s).length;
     const play = new Button({
-      width: 440,
+      width: 370,
       height: 100,
       color: n > 0 ? C.blue : C.line,
       text: 'Akvaryum',
-      fontSize: 46,
+      fontSize: 42,
       icon: fishIcon(C.white),
       onTap: () => this.startSentences(),
     });
-    play.position.set(1565, OPTIONS_Y);
+    play.position.set(1455, OPTIONS_Y);
+    this.drawShare(n > 0, 'Cümle Okuyorum');
     const info = label(n > 0 ? `Bu seçimle ${n} cümle var` : 'Bu seçimle cümle yok', 26, n > 0 ? C.muted : C.red, {
       fontWeight: '400',
     });
@@ -415,6 +419,25 @@ export class MenuScene implements Scene {
     const edit = new Button({ width: 280, height: 70, color: C.blue, outline: true, flat: true, text: o.button, fontSize: 32, onTap: o.edit });
     edit.position.set(cx, CARD_Y + CARD_H - 65);
     this.body.addChild(edit);
+  }
+
+  /** Başlat'ın yanındaki "Adres Ver": bu ayarlarla açılan play.html adresini gösterir. */
+  private drawShare(ready: boolean, what: string) {
+    const b = new Button({
+      width: 200,
+      height: 100,
+      color: ready ? C.blue : C.line,
+      outline: true,
+      flat: true,
+      text: 'Adres Ver',
+      fontSize: 32,
+      onTap: () => {
+        if (!ready) return sfx.wrong();
+        openShareDialog(shareUrl(this.s), `"${what}"`);
+      },
+    });
+    b.position.set(1760, OPTIONS_Y);
+    this.body.addChild(b);
   }
 
   private soundOption(): OptionDef {
