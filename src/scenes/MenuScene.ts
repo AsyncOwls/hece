@@ -5,11 +5,12 @@ import { parseCustomWords } from '../data/custom';
 import { SENTENCE_SETS, SENTENCES, parseCustomSentences } from '../data/sentences';
 import { Button } from '../ui/Button';
 import { fishIcon, fullscreenIcon, playIcon } from '../ui/icons';
-import { openTextEditor } from '../ui/TextEditor';
+import { openListEditor } from '../ui/ListEditor';
 import { C, GROUP_COLORS, W, label, mix } from '../theme';
+import { lowerTr } from '../data/syllabify';
 import { currentVoice, onVoicesChanged, sfx, speak, turkishVoices, type SoundMode } from '../audio';
 import type { Settings } from '../settings';
-import { gamePool, sentencePool } from './common';
+import { gamePool, mySentences, myWords, sentencePool } from './common';
 import { SentenceScene } from './SentenceScene';
 import { SkyScene } from './SkyScene';
 
@@ -195,17 +196,20 @@ export class MenuScene implements Scene {
   private drawSyllableTab() {
     const s = this.s;
     this.drawTableCard();
-    const { words } = parseCustomWords(s.customWords);
+    const total = parseCustomWords(s.customWords).words.length;
+    const words = myWords(s);
     this.drawListCard({
       x: 1270,
       w: 590,
       title: 'Benim kelimelerim',
       source: 'useMine',
-      count: `${words.length} kelime`,
+      count: `${words.length} / ${total} kelime seçili`,
       preview: words.map((w) => w.syllables.join('-')),
       separator: '   ',
-      empty: 'Kendi kelimelerinizi yazın;\nhecelere kendiliğinden ayrılır.',
-      button: words.length ? 'Düzenle' : 'Kelime Yaz',
+      empty: total
+        ? `${total} kelime kayıtlı,\nhiçbiri seçili değil.`
+        : 'Kendi kelimelerinizi yazın;\nkayıtlı kalır, istediğinizi seçersiniz.',
+      button: total ? 'Seç / Düzenle' : 'Kelime Yaz',
       edit: () => this.editWords(),
     });
 
@@ -263,18 +267,21 @@ export class MenuScene implements Scene {
       maxLines: 9,
       empty: '',
     });
-    const { sentences } = parseCustomSentences(s.customSentences);
+    const total = parseCustomSentences(s.customSentences).sentences.length;
+    const sentences = mySentences(s);
     this.drawListCard({
       x: 975,
       w: 885,
       title: 'Benim cümlelerim',
       source: 'sentMine',
-      count: `${sentences.length} cümle`,
+      count: `${sentences.length} / ${total} cümle seçili`,
       preview: sentences.map(short),
       separator: '\n',
       maxLines: 7,
-      empty: 'Okutmak istediğiniz cümleleri yazın;\nhazır cümlelerle aynı havuza eklenir.',
-      button: sentences.length ? 'Düzenle' : 'Cümle Yaz',
+      empty: total
+        ? `${total} cümle kayıtlı, hiçbiri seçili değil.`
+        : 'Okutmak istediğiniz cümleleri yazın;\nkayıtlı kalır, istediğinizi seçersiniz.',
+      button: total ? 'Seç / Düzenle' : 'Cümle Yaz',
       edit: () => this.editSentences(),
     });
 
@@ -461,15 +468,14 @@ export class MenuScene implements Scene {
   /** Kaynağı açar/kapar; bir bölümün iki kaynağı birden kapanamaz. */
   private toggleSource(which: Source) {
     const s = this.s;
-    if (which === 'useMine' && !s.useMine && parseCustomWords(s.customWords).words.length === 0) return this.editWords();
-    if (which === 'sentMine' && !s.sentMine && parseCustomSentences(s.customSentences).sentences.length === 0) {
-      return this.editSentences();
-    }
+    // Seçili bir şey yokken açılırsa önce liste açılsın.
+    if (which === 'useMine' && !s.useMine && myWords(s).length === 0) return this.editWords();
+    if (which === 'sentMine' && !s.sentMine && mySentences(s).length === 0) return this.editSentences();
     if (s[which] && !s[PARTNER[which]]) return sfx.wrong();
     this.change(() => (s[which] = !s[which]));
   }
 
-  /** Yazılanlar kaydedilince: bir şey varsa o kaynağı aç, yoksa kapatıp diğerini aç. */
+  /** Liste kaydedilince: seçili bir şey varsa o kaynağı aç, yoksa kapatıp diğerini aç. */
   private saved(source: 'useMine' | 'sentMine', hasItems: boolean) {
     const s = this.s;
     s[source] = hasItems;
@@ -477,49 +483,45 @@ export class MenuScene implements Scene {
   }
 
   private editWords() {
-    openTextEditor({
+    const s = this.s;
+    openListEditor({
       title: 'Benim kelimelerim',
-      help: 'Kelimeleri boşluk, virgül ya da alt satırla ayırın. Heceler kendiliğinden ayrılır; isterseniz kendiniz ayırın: kap-lum-ba-ğa',
+      help: 'Oyunda çıkmasını istediğiniz kelimeleri işaretleyin. Yeni kelimeleri boşluk, virgül ya da alt satırla ayırın; heceler kendiliğinden ayrılır, isterseniz kendiniz ayırın: kap-lum-ba-ğa',
       placeholder: 'araba elma kalem …',
-      initial: this.s.customWords,
-      check: (text) => {
+      items: parseCustomWords(s.customWords).words.map((w) => w.syllables.join('-')),
+      off: s.wordsOff,
+      key: (item) => lowerTr(item.replace(/-/g, '')),
+      parse: (text) => {
         const { words, issues } = parseCustomWords(text);
-        return {
-          ok: words.map((w) => w.syllables.join('-')),
-          bad: issues.map((i) => `${i.text} (${i.reason})`),
-          count:
-            (words.length ? `${words.length} kelime hazır` : 'Henüz kelime yok') +
-            (issues.length ? ` · ${issues.length} tanesi alınmayacak` : ''),
-        };
+        return { items: words.map((w) => w.syllables.join('-')), issues: issues.map((i) => `${i.text}: ${i.reason}`) };
       },
-      onSave: (text) =>
+      onSave: (items, off) =>
         this.change(() => {
-          this.s.customWords = text;
-          this.saved('useMine', parseCustomWords(text).words.length > 0);
+          s.customWords = items.join(' ');
+          s.wordsOff = off;
+          this.saved('useMine', items.length > off.length);
         }),
     });
   }
 
   private editSentences() {
-    openTextEditor({
+    const s = this.s;
+    openListEditor({
       title: 'Benim cümlelerim',
-      help: 'Her satıra bir cümle yazın. Hazır cümleler de açıksa aynı havuza eklenir;\nçocuk her balığa dokunduğunda havuzdan yeni bir cümle çıkar.',
+      help: 'Oyunda çıkmasını istediğiniz cümleleri işaretleyin. Yeni cümleleri her satıra bir tane yazın; hazır cümleler de açıksa aynı havuza eklenir.',
       placeholder: 'Ali okula koştu.\nKedi süt içti.',
-      initial: this.s.customSentences,
-      check: (text) => {
+      items: parseCustomSentences(s.customSentences).sentences,
+      off: s.sentOff,
+      key: lowerTr,
+      parse: (text) => {
         const { sentences, issues } = parseCustomSentences(text);
-        return {
-          ok: sentences,
-          bad: issues.map((i) => `${i.text} (${i.reason})`),
-          count:
-            (sentences.length ? `${sentences.length} cümle hazır` : 'Henüz cümle yok') +
-            (issues.length ? ` · ${issues.length} tanesi alınmayacak` : ''),
-        };
+        return { items: sentences, issues: issues.map((i) => `${i.text}: ${i.reason}`) };
       },
-      onSave: (text) =>
+      onSave: (items, off) =>
         this.change(() => {
-          this.s.customSentences = text;
-          this.saved('sentMine', parseCustomSentences(text).sentences.length > 0);
+          s.customSentences = items.join('\n');
+          s.sentOff = off;
+          this.saved('sentMine', items.length > off.length);
         }),
     });
   }

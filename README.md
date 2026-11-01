@@ -12,8 +12,9 @@ yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomat
 - **Öğretmen ekranı (menü):** İki kelime kaynağı var, ikisi ayrı ayrı açılıp kapanır:
   - **Harf tablosu kelimeleri:** Bir ya da birden çok tablo seçilir; farklı ses gruplarından
     karışık seçilebilir. Grup adına dokunmak gruptaki tüm tabloları seçer (hepsi seçiliyse kaldırır).
-  - **Benim kelimelerim:** Öğretmen kendi kelimelerini yazar; heceler kendiliğinden ayrılır,
-    istenirse tireyle elle verilir (`kap-lum-ba-ğa`). Yalnız bu kart açıksa oyun yalnızca bu
+  - **Benim kelimelerim:** Öğretmen kendi kelimelerini ekler; heceler kendiliğinden ayrılır,
+    istenirse tireyle elle verilir (`kap-lum-ba-ğa`). Kelimeler kayıtlı kalır; listeden oyunda
+    çıkacak olanlar işaretlenir, istenmeyenler silinir. Yalnız bu kart açıksa oyun yalnızca işaretli
     kelimelerle, ikisi açıksa karışık oynanır.
 
   Altta fazladan hece, hedef kelime, hece rengi (Renkli / Tek renk) ve **Ses** (Açık / Okuma kapalı / Sessiz) ayarları vardır.
@@ -35,8 +36,12 @@ Ses açıksa hoparlör düğmesi cümleyi, cümledeki bir kelimeye dokunmak o ke
 
 - **Hazır cümleler:** Öğretmenin verdiği fişlerdeki cümleler (şu an ANETİL fişi, 40 cümle;
   `src/data/sentences.ts`). Harf tablosu seçiminden bağımsızdır.
-- **Benim cümlelerim:** Öğretmen her satıra bir cümle yazar. İkisi de açıksa aynı havuzda karışır.
+- **Benim cümlelerim:** Öğretmen her satıra bir cümle yazarak ekler. Cümleler kayıtlı kalır; listeden
+  oyunda çıkacak olanlar işaretlenir, istenmeyenler silinir. İkisi de açıksa işaretliler hazır cümlelerle
+  aynı havuzda karışır.
 - Akvaryumdaki balık sayısı 4, 6 ya da 8 seçilebilir.
+
+Öğretmenin kelime ve cümleleri tarayıcıda saklanır (aynı bilgisayar ve tarayıcıda kalıcıdır).
 
 Okuma kalitesi tarayıcının Türkçe sesine bağlıdır. En doğal sesler: Microsoft Edge'de
 "Emel Online (Natural)", macOS'ta Sistem Ayarları → Erişilebilirlik → Seslendirilen İçerik

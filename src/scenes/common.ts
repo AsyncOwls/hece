@@ -18,7 +18,17 @@ export function syllableBank(t: Table): string[] {
   return [...set];
 }
 
-const mine = (s: Settings) => (s.useMine ? parseCustomWords(s.customWords).words : []);
+/** Öğretmenin kayıtlı kelimelerinden seçili olanlar. */
+export function myWords(s: Settings): Word[] {
+  return parseCustomWords(s.customWords).words.filter((w) => !s.wordsOff.includes(lowerTr(w.text)));
+}
+
+/** Öğretmenin kayıtlı cümlelerinden seçili olanlar. */
+export function mySentences(s: Settings): string[] {
+  return parseCustomSentences(s.customSentences).sentences.filter((x) => !s.sentOff.includes(lowerTr(x)));
+}
+
+const mine = (s: Settings) => (s.useMine ? myWords(s) : []);
 
 /** Ayarlara göre oyunda sorulacak kelimeler: tablo kelimeleri ve/veya öğretmenin kelimeleri. */
 export function gamePool(s: Settings): Word[] {
@@ -48,8 +58,7 @@ export function gameBank(s: Settings): string[] {
 /** Cümle Okuyorum havuzu: hazır cümleler ve/veya öğretmenin cümleleri (sırası sahnede karıştırılır). */
 export function sentencePool(s: Settings): string[] {
   const builtIn = s.sentBuiltIn ? SENTENCES : [];
-  const mine = s.sentMine ? parseCustomSentences(s.customSentences).sentences : [];
-  return [...new Set([...builtIn, ...mine])];
+  return [...new Set([...builtIn, ...(s.sentMine ? mySentences(s) : [])])];
 }
 
 export function capitalizeTr(s: string) {

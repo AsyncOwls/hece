@@ -9,8 +9,10 @@ export interface Settings {
   useTable: boolean;
   /** Öğretmenin kendi kelimeleri kullanılsın. */
   useMine: boolean;
-  /** Öğretmenin yazdığı kelimeler, olduğu gibi (bkz. parseCustomWords). */
+  /** Öğretmenin kayıtlı kelimeleri (bkz. parseCustomWords). */
   customWords: string;
+  /** Kayıtlı ama seçili olmayan kelimeler (küçük harfli). */
+  wordsOff: string[];
   /** Özel isimleri (Ali, Lale…) dahil et. */
   proper: boolean;
   /** Doğru hecelere eklenen fazladan hece sayısı. */
@@ -25,8 +27,10 @@ export interface Settings {
   sentBuiltIn: boolean;
   /** Cümle Okuyorum: öğretmenin kendi cümleleri kullanılsın. */
   sentMine: boolean;
-  /** Öğretmenin cümleleri, her satırda bir tane. */
+  /** Öğretmenin kayıtlı cümleleri, her satırda bir tane. */
   customSentences: string;
+  /** Kayıtlı ama seçili olmayan cümleler (küçük harfli). */
+  sentOff: string[];
   /** Cümle Okuyorum'da akvaryumdaki balık sayısı. */
   creatures: number;
   sound: SoundMode;
@@ -42,6 +46,7 @@ export const DEFAULTS: Settings = {
   useTable: true,
   useMine: false,
   customWords: '',
+  wordsOff: [],
   proper: true,
   distractors: 2,
   showWord: false,
@@ -50,6 +55,7 @@ export const DEFAULTS: Settings = {
   sentBuiltIn: true,
   sentMine: false,
   customSentences: '',
+  sentOff: [],
   creatures: 6,
   sound: 'on',
   voice: '',

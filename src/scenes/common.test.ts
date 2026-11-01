@@ -15,6 +15,26 @@ describe('sentencePool', () => {
   });
 });
 
+describe('teacher selections', () => {
+  it('only uses the checked teacher words and sentences, keeping the rest saved', () => {
+    const s = {
+      ...base,
+      useTable: false,
+      useMine: true,
+      customWords: 'araba kap-lum-ba-ğa elma',
+      wordsOff: ['kaplumbağa'],
+      sentBuiltIn: false,
+      sentMine: true,
+      customSentences: 'Ali okula koştu.\nKedi süt içti.',
+      sentOff: ['kedi süt içti.'],
+    };
+    expect(gamePool(s).map((w) => w.text)).toEqual(['araba', 'elma']);
+    expect(gameBank(s)).not.toContain('lum');
+    expect(sentencePool(s)).toEqual(['Ali okula koştu.']);
+    expect(s.customWords).toContain('kap-lum-ba-ğa');
+  });
+});
+
 describe('gamePool', () => {
   it('mixes words from tables in different sound groups', () => {
     const [a, b] = [ALL_TABLES[1], ALL_TABLES[10]];
