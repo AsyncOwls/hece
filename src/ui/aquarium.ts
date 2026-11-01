@@ -148,20 +148,27 @@ class AquariumBack extends Container {
 
   constructor() {
     super();
-    const g = new Graphics();
     // Akvaryumun dışı (ekran 16:9 değilse de kenarlar dolsun) ve çerçeve.
-    g.rect(-W, -H, 3 * W, 3 * H).fill(0x23324f);
-    g.roundRect(18, 18, W - 36, H - 36, 40).fill(0x3b4f78);
+    const frame = new Graphics();
+    frame.rect(-W, -H, 3 * W, 3 * H).fill(0x23324f);
+    frame.roundRect(18, 18, W - 36, H - 36, 40).fill(0x3b4f78);
+    // Suyun içindeki her şey (kum tümsekleri, huzmeler…) camın içinde kalsın diye kırpılır.
+    const water = new Container();
+    const mask = new Graphics().roundRect(TANK.left, TANK.top, TANK.right - TANK.left, TANK.bottom - TANK.top, 24).fill(0xffffff);
+    water.mask = mask;
+    this.addChild(frame, mask, water);
+
+    const g = new Graphics();
     gradient(g, TANK.left, TANK.top, TANK.right - TANK.left, TANK.bottom, 0x8fdcf7, 0x1c63b0, 48);
     g.rect(TANK.left, TANK.top, TANK.right - TANK.left, 40).fill({ color: 0xffffff, alpha: 0.25 });
     for (const [x, w] of [[300, 160], [760, 220], [1250, 140], [1600, 200]]) {
       g.poly([x, TANK.top, x + w, TANK.top, x + w * 1.8, SAND_Y, x + w * 0.6, SAND_Y]).fill({ color: 0xffffff, alpha: 0.07 });
     }
-    this.addChild(g);
+    water.addChild(g);
 
     for (let i = 0; i < 9; i++) {
       const w = new Graphics();
-      this.addChild(w);
+      water.addChild(w);
       this.weeds.push({
         g: w,
         x: 110 + i * 210 + rand(-40, 40),
@@ -184,14 +191,14 @@ class AquariumBack extends Container {
     sand.ellipse(1520, SAND_Y + 25, 120, 60).fill(0x868e96).stroke({ width: 5, color: 0x5c636a });
     sand.star(1050, SAND_Y + 75, 5, 42, 20).fill(0xff922b).stroke({ width: 4, color: 0xd9480f, join: 'round' });
     sand.moveTo(760, SAND_Y + 95).arc(760, SAND_Y + 95, 40, Math.PI, 0).closePath().fill(0xffc9c9).stroke({ width: 4, color: 0xe03131 });
-    this.addChild(sand);
+    water.addChild(sand);
 
     for (let i = 0; i < 26; i++) {
       const b = new Graphics()
         .circle(0, 0, rand(5, 13))
         .stroke({ width: 3, color: 0xffffff, alpha: 0.7 });
       b.position.set(i % 2 ? rand(260, 420) : rand(TANK.left + 40, TANK.right - 40), rand(TANK.top, SAND_Y));
-      this.addChild(b);
+      water.addChild(b);
       this.bubbles.push({ g: b, vy: rand(0.8, 2), phase: rand(0, 6) });
     }
 
