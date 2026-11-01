@@ -10,7 +10,8 @@ yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomat
 ## Nasıl oynanır
 
 - **Öğretmen ekranı (menü):** İki kelime kaynağı var, ikisi ayrı ayrı açılıp kapanır:
-  - **Harf tablosu kelimeleri:** Tabloya tek dokunuşla seçilir (o harfe kadar öğrenilenler).
+  - **Harf tablosu kelimeleri:** Bir ya da birden çok tablo seçilir; farklı ses gruplarından
+    karışık seçilebilir. Grup adına dokunmak gruptaki tüm tabloları seçer (hepsi seçiliyse kaldırır).
   - **Benim kelimelerim:** Öğretmen kendi kelimelerini yazar; heceler kendiliğinden ayrılır,
     istenirse tireyle elle verilir (`kap-lum-ba-ğa`). Yalnız bu kart açıksa oyun yalnızca bu
     kelimelerle, ikisi açıksa karışık oynanır.

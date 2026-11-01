@@ -3,8 +3,9 @@ import { parseCustomWords } from '../data/custom';
 import { lowerTr } from '../data/syllabify';
 import type { Settings } from '../settings';
 
-export function currentTable(s: Settings): Table {
-  return ALL_TABLES[Math.min(s.table, ALL_TABLES.length - 1)];
+/** Seçili tablolar, müfredat sırasıyla. */
+export function selectedTables(s: Settings): Table[] {
+  return ALL_TABLES.filter((t) => s.tables.includes(t.order));
 }
 
 /** Bu tabloya kadar okunabilen tüm heceler (çeldirici kaynağı). */
@@ -22,7 +23,7 @@ const mine = (s: Settings) => (s.useMine ? parseCustomWords(s.customWords).words
 export function gamePool(s: Settings): Word[] {
   const seen = new Set<string>();
   const out: Word[] = [];
-  const table = s.useTable ? wordPool(currentTable(s), s) : [];
+  const table = s.useTable ? selectedTables(s).flatMap((t) => wordPool(t, { cumulative: false, proper: s.proper })) : [];
   for (const w of [...table, ...mine(s)]) {
     const key = lowerTr(w.text);
     if (seen.has(key)) continue;
@@ -32,9 +33,13 @@ export function gamePool(s: Settings): Word[] {
   return out;
 }
 
-/** Çeldirici heceler: yalnız öğretmenin kelimeleri seçiliyse onların heceleri. */
+/**
+ * Çeldirici heceler: seçili en ileri tabloya kadar okunabilen heceler (o harfe
+ * gelen çocuk öncekileri de bilir); yalnız öğretmenin kelimeleri seçiliyse onların heceleri.
+ */
 export function gameBank(s: Settings): string[] {
-  const set = new Set(s.useTable ? syllableBank(currentTable(s)) : []);
+  const last = selectedTables(s).at(-1);
+  const set = new Set(s.useTable && last ? syllableBank(last) : []);
   for (const w of mine(s)) w.syllables.forEach((x) => set.add(lowerTr(x)));
   return [...set];
 }

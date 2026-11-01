@@ -1,16 +1,14 @@
 import type { SoundMode } from './audio';
 
 export interface Settings {
-  /** ALL_TABLES içindeki seçili tablo. */
-  table: number;
+  /** Seçili tablolar (ALL_TABLES sırası); farklı ses gruplarından karışık olabilir. */
+  tables: number[];
   /** Harf tablosunun kelimeleri kullanılsın. */
   useTable: boolean;
   /** Öğretmenin kendi kelimeleri kullanılsın. */
   useMine: boolean;
   /** Öğretmenin yazdığı kelimeler, olduğu gibi (bkz. parseCustomWords). */
   customWords: string;
-  /** Önceki tabloların kelimelerini de kat. */
-  cumulative: boolean;
   /** Özel isimleri (Ali, Lale…) dahil et. */
   proper: boolean;
   /** Doğru hecelere eklenen fazladan hece sayısı. */
@@ -29,11 +27,10 @@ export interface Settings {
 const KEY = 'hece.settings.v1';
 
 const DEFAULTS: Settings = {
-  table: 0,
+  tables: [0],
   useTable: true,
   useMine: false,
   customWords: '',
-  cumulative: false,
   proper: true,
   distractors: 2,
   showWord: false,
@@ -45,7 +42,15 @@ const DEFAULTS: Settings = {
 
 export function loadSettings(): Settings {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') };
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');
+    // Eski sürüm tek tablo + "önceki tablolar da" saklıyordu.
+    if (!Array.isArray(saved.tables) && typeof saved.table === 'number') {
+      const n: number = saved.table;
+      saved.tables = saved.cumulative ? Array.from({ length: n + 1 }, (_, i) => i) : [n];
+    }
+    delete saved.table;
+    delete saved.cumulative;
+    return { ...DEFAULTS, ...saved };
   } catch {
     return { ...DEFAULTS };
   }

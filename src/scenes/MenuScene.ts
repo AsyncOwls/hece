@@ -7,7 +7,7 @@ import { fullscreenIcon } from '../ui/icons';
 import { openWordEditor } from '../ui/WordEditor';
 import { C, GROUP_COLORS, W, label } from '../theme';
 import { currentVoice, onVoicesChanged, sfx, speak, turkishVoices, type SoundMode } from '../audio';
-import { currentTable, gamePool } from './common';
+import { gamePool } from './common';
 import { SkyScene } from './SkyScene';
 
 const DISTRACTOR_STEPS = [0, 2, 4];
@@ -132,16 +132,21 @@ export class MenuScene implements Scene {
 
   private drawTableCard() {
     const s = this.s;
-    const selected = currentTable(s);
     const body = this.card(60, 1180, s.useTable, 'Harf tablosu kelimeleri', () => this.toggleSource('useTable'));
 
     CURRICULUM.forEach((group, gi) => {
       const y = CARD_Y + 150 + gi * 86;
       const color = GROUP_COLORS[gi];
+      // Grup adına dokunmak gruptaki tüm tabloları seçer (hepsi seçiliyse kaldırır).
       const name = label(group.name, 30, color, { fontWeight: '400' });
       name.anchor.set(0, 0.5);
       name.position.set(104, y);
-      body.addChild(name);
+      body.addChild(
+        tappable(name, () => {
+          sfx.click();
+          this.toggleTables(group.tables.map((t) => t.order));
+        }),
+      );
 
       let x = 330;
       for (const t of group.tables) {
@@ -150,14 +155,10 @@ export class MenuScene implements Scene {
           width: w,
           height: 70,
           color,
-          outline: t.order !== selected.order,
+          outline: !s.tables.includes(t.order),
           text: t.label,
           fontSize: 42,
-          onTap: () =>
-            this.change(() => {
-              s.table = t.order;
-              s.useTable = true;
-            }),
+          onTap: () => this.toggleTables([t.order]),
         });
         b.position.set(x + w / 2, y);
         x += w + 14;
@@ -166,15 +167,17 @@ export class MenuScene implements Scene {
     });
 
     const y = CARD_Y + CARD_H - 58;
-    const cumulative = checkRow('Önceki tabloları da kat', s.cumulative, 40, 32, false, () =>
-      this.change(() => (s.cumulative = !s.cumulative)),
-    );
-    cumulative.position.set(104, y);
     const proper = checkRow('Özel isimler (Ali, Lale…)', s.proper, 40, 32, false, () =>
       this.change(() => (s.proper = !s.proper)),
     );
-    proper.position.set(640, y);
-    body.addChild(cumulative, proper);
+    proper.position.set(104, y);
+    const hint = label('Birden çok tablo seçilebilir.\nGrup adı, gruptakilerin hepsini seçer.', 26, C.muted, {
+      fontWeight: '400',
+      align: 'right',
+    });
+    hint.anchor.set(1, 0.5);
+    hint.position.set(1196, y);
+    body.addChild(proper, hint);
   }
 
   private drawMineCard() {
@@ -289,6 +292,21 @@ export class MenuScene implements Scene {
     const hint = label('Oyundan çıkmak için sağ üstteki çarka basılı tutun.', 24, C.muted, { fontWeight: '400' });
     hint.position.set(1560, 1042);
     this.body.addChild(play, info, hint);
+  }
+
+  /**
+   * Tabloları seçer ya da kaldırır: hepsi seçiliyse kaldırır, değilse hepsini
+   * seçer. Tablo kartı kapalıysa açar; son seçili tablo kaldırılamaz.
+   */
+  private toggleTables(orders: number[]) {
+    const s = this.s;
+    const allOn = s.useTable && orders.every((o) => s.tables.includes(o));
+    const rest = s.tables.filter((o) => !orders.includes(o));
+    if (allOn && rest.length === 0) return sfx.wrong();
+    this.change(() => {
+      s.tables = allOn ? rest : [...rest, ...orders].sort((a, b) => a - b);
+      s.useTable = true;
+    });
   }
 
   /** Kaynağı açar/kapar; ikisi birden kapanamaz. */
