@@ -7,12 +7,18 @@ Kelimeler, ses gruplarına göre aşamalı "Hece ve Kelime Tablosu" çalışma k
 alınmıştır (`src/data/tables.ts`). Her tabloda yalnızca o ana kadar öğrenilmiş harflerle
 yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomatik yapılır.
 
-## Modlar
+## Nasıl oynanır
 
-- **Kelime Kur**: Kelime sesli okunur (ya da yazılı gösterilir), öğrenci heceleri kutulara dizer.
-- **Serbest Oyun**: Birkaç kelimenin heceleri karışık verilir; tablolardaki her kelime kabul edilir.
+- **Öğretmen ekranı (menü):** Ses grubu, harf tablosu ve seçenekler burada seçilir, sonra **Oyunu Başlat**.
+- **Çocuk ekranı:** Gökyüzünde boş bulutlar, çimenlerin üstünde heceler. Başka düğme yoktur.
+  Heceler sürüklenerek (ya da dokunularak) sırayla bulutlara konur. Kelime tamamlanınca
+  heceler tek bulutta birleşir, gökkuşağı çıkar ve kelime okunur; oyun kendiliğinden sonraki
+  kelimeye geçer. Tur bitince "Aferin!" ve yeniden oyna (▶) düğmesi gelir.
+- Kelime başta sesli okunur; boş bir buluta dokunmak kelimeyi yeniden okutur.
+  "Hedef kelime: Bulutta soluk" seçilirse heceler bulutların içinde soluk yazılı görünür.
+- Menüye dönmek için sağ üstteki soluk çarka **basılı tutun** (çocuklar yanlışlıkla açmasın diye).
 
-Klavye: `Boşluk` dinle / sonraki, `Enter` sonraki / kontrol, `F` tam ekran, `Esc` menü.
+Klavye (öğretmen için): `Boşluk` / `Enter` kelimeyi yeniden oku / sonraki, `F` tam ekran, `Esc` menü.
 
 ## Geliştirme
 

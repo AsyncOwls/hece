@@ -4,8 +4,7 @@ import { CURRICULUM, wordPool } from '../data/curriculum';
 import { Button } from '../ui/Button';
 import { fullscreenIcon } from '../ui/icons';
 import { C, GROUP_COLORS, W, label } from '../theme';
-import { BuildScene } from './BuildScene';
-import { FreeScene } from './FreeScene';
+import { SkyScene } from './SkyScene';
 import { sfx } from '../audio';
 
 const DISTRACTOR_STEPS = [0, 2, 4];
@@ -50,7 +49,7 @@ export class MenuScene implements Scene {
   constructor(private game: Game) {
     const title = label('Hece Birleştir', 110, C.red, { fontWeight: '700' });
     title.position.set(W / 2, 95);
-    const sub = label('Heceleri sırayla yerleştir, kelimeyi kur!', 40, C.muted, { fontWeight: '400' });
+    const sub = label('Öğretmen ayarları', 40, C.muted, { fontWeight: '400' });
     sub.position.set(W / 2, 180);
 
     const fs = new Button({ width: 110, height: 100, color: C.ink, outline: true, icon: fullscreenIcon(C.ink), onTap: () => game.toggleFullscreen() });
@@ -167,7 +166,7 @@ export class MenuScene implements Scene {
       },
       {
         title: 'Hedef kelime',
-        value: () => [s.showWord ? 'Yazılı' : 'Gizli (dinle)', s.showWord],
+        value: () => [s.showWord ? 'Bulutta soluk' : 'Gizli (dinle)', s.showWord],
         tap: () => (s.showWord = !s.showWord),
       },
     ];
@@ -187,29 +186,28 @@ export class MenuScene implements Scene {
   }
 
   private buildStartButtons() {
-    const build = new Button({
-      width: 560,
+    const play = new Button({
+      width: 620,
       height: 150,
-      color: C.blue,
-      text: 'Kelime Kur',
+      color: C.green,
+      text: 'Oyunu Başlat',
       fontSize: 66,
-      onTap: () => this.game.go((g) => new BuildScene(g)),
+      onTap: () => this.start(),
     });
-    build.position.set(W / 2 - 310, 940);
-    const free = new Button({
-      width: 560,
-      height: 150,
-      color: C.purple,
-      text: 'Serbest Oyun',
-      fontSize: 66,
-      onTap: () => this.game.go((g) => new FreeScene(g)),
+    play.position.set(W / 2, 925);
+    const hint = label('Oyundayken ayarlara dönmek için sağ üstteki çarka basılı tutun (ya da Esc).', 30, C.muted, {
+      fontWeight: '400',
     });
-    free.position.set(W / 2 + 310, 940);
-    this.view.addChild(build, free);
+    hint.position.set(W / 2, 1035);
+    this.view.addChild(play, hint);
+  }
+
+  private start() {
+    this.game.go((g) => new SkyScene(g));
   }
 
   onKey(e: KeyboardEvent) {
-    if (e.key === 'Enter') this.game.go((g) => new BuildScene(g));
+    if (e.key === 'Enter') this.start();
   }
 
   destroy() {}
