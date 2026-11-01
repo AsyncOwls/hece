@@ -64,6 +64,27 @@ function checkRow(text: string, on: boolean, size: number, fontSize: number, bol
   });
 }
 
+/**
+ * Öğeleri satırlara dizer; bir öğe asla ortadan bölünmez (Pixi'nin kaydırması
+ * "ka-lem" gibi heceli kelimeleri tireden böler). Sığmayanların yerine "…".
+ */
+function wrapItems(t: Text, items: string[], separator: string, maxWidth: number, maxLines: number): string {
+  const lines: string[][] = [];
+  let line: string[] = [];
+  for (const item of items) {
+    t.text = [...line, item].join(separator);
+    if (line.length && (separator === '\n' || t.width > maxWidth)) {
+      lines.push(line);
+      if (lines.length === maxLines) break;
+      line = [];
+    }
+    line.push(item);
+  }
+  if (lines.length < maxLines && line.length) lines.push(line);
+  const shown = lines.reduce((n, l) => n + l.length, 0);
+  return lines.map((l) => l.join(separator)).join('\n') + (shown < items.length ? '  …' : '');
+}
+
 /** İki satırlı ayar butonu: üstte başlık, altta değer. */
 class OptionButton extends Container {
   private bg = new Graphics();
@@ -371,17 +392,8 @@ export class MenuScene implements Scene {
     if (o.preview.length) {
       const n = label(o.count, 34, C.ink);
       n.position.set(cx, CARD_Y + 135);
-      let list = '';
-      let lines = 0;
-      for (const item of o.preview) {
-        if (o.separator === '\n' ? lines >= (o.maxLines ?? 5) : list.length + item.length > 150) {
-          list += '  …';
-          break;
-        }
-        list += (list ? o.separator : '') + item;
-        if (o.separator === '\n') lines++;
-      }
-      const preview = label(list, 28, C.muted, { fontWeight: '400', wordWrap: true, wordWrapWidth: w - 90, lineHeight: 42 });
+      const preview = label('', 28, C.muted, { fontWeight: '400', lineHeight: 42 });
+      preview.text = wrapItems(preview, o.preview, o.separator, w - 90, o.maxLines ?? 5);
       preview.anchor.set(0.5, 0);
       preview.position.set(cx, CARD_Y + 180);
       body.addChild(n, preview);
