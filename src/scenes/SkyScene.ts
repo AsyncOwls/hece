@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Game, Scene } from '../game';
-import { wordPool, type Table, type Word } from '../data/curriculum';
+import { MAX_SYLLABLES, type Word } from '../data/curriculum';
 import { lowerTr } from '../data/syllabify';
 import { Button } from '../ui/Button';
 import { playIcon } from '../ui/icons';
@@ -12,7 +12,7 @@ import { TeacherGear } from '../ui/TeacherGear';
 import { C, CARD_COLORS, H, W, label, shuffle } from '../theme';
 import { easeOutBack, shake, tween, wait } from '../tween';
 import { sfx, speak } from '../audio';
-import { capitalizeTr, currentTable, syllableBank } from './common';
+import { capitalizeTr, gameBank, gamePool } from './common';
 import { MenuScene } from './MenuScene';
 
 const CLOUD_Y = 420;
@@ -74,7 +74,6 @@ class CloudSlot extends Container {
  */
 export class SkyScene implements Scene {
   view = new Container();
-  private table: Table;
   private words: Word[];
   private bank: string[];
   private index = 0;
@@ -97,10 +96,9 @@ export class SkyScene implements Scene {
 
   constructor(private game: Game) {
     const s = game.settings;
-    this.table = currentTable(game);
-    const pool = wordPool(this.table, s).filter((w) => w.syllables.length <= 5);
+    const pool = gamePool(s).filter((w) => w.syllables.length <= MAX_SYLLABLES);
     this.words = shuffle(pool).slice(0, s.roundSize);
-    this.bank = syllableBank(this.table);
+    this.bank = gameBank(s);
 
     const gear = new TeacherGear(() => this.toMenu());
     gear.position.set(W - 70, 70);
@@ -169,7 +167,7 @@ export class SkyScene implements Scene {
 
     // Heceler (karışık, bir ya da iki sıra)
     const shuffled = shuffle(texts);
-    const colors = shuffle(CARD_COLORS);
+    const colors = s.oneColor ? [C.ink] : shuffle(CARD_COLORS);
     const perRow = Math.max(1, Math.floor((W - 160 + GAP) / (w + GAP)));
     const rows: string[][] = [];
     for (let i = 0; i < shuffled.length; i += perRow) rows.push(shuffled.slice(i, i + perRow));

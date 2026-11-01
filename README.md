@@ -9,7 +9,14 @@ yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomat
 
 ## Nasıl oynanır
 
-- **Öğretmen ekranı (menü):** Ses grubu, harf tablosu ve seçenekler burada seçilir, sonra **Oyunu Başlat**.
+- **Öğretmen ekranı (menü):** İki kelime kaynağı var, ikisi ayrı ayrı açılıp kapanır:
+  - **Harf tablosu kelimeleri:** Tabloya tek dokunuşla seçilir (o harfe kadar öğrenilenler).
+  - **Benim kelimelerim:** Öğretmen kendi kelimelerini yazar; heceler kendiliğinden ayrılır,
+    istenirse tireyle elle verilir (`kap-lum-ba-ğa`). Yalnız bu kart açıksa oyun yalnızca bu
+    kelimelerle, ikisi açıksa karışık oynanır.
+
+  Altta fazladan hece, hedef kelime, hece rengi (Renkli / Tek renk) ve **Ses** (Açık / Okuma kapalı / Sessiz) ayarları vardır.
+  Ses açıkken "Okuyan ses" satırından tarayıcıdaki Türkçe sesler denenip değiştirilebilir.
 - **Çocuk ekranı:** Gökyüzünde boş bulutlar, çimenlerin üstünde heceler. Başka düğme yoktur.
   Heceler sürüklenerek (ya da dokunularak) sırayla bulutlara konur. Kelime tamamlanınca
   heceler tek bulutta birleşir, gökkuşağı çıkar ve kelime okunur; oyun kendiliğinden sonraki
@@ -17,6 +24,10 @@ yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomat
 - Kelime başta sesli okunur; boş bir buluta dokunmak kelimeyi yeniden okutur.
   "Hedef kelime: Bulutta soluk" seçilirse heceler bulutların içinde soluk yazılı görünür.
 - Menüye dönmek için sağ üstteki soluk çarka **basılı tutun** (çocuklar yanlışlıkla açmasın diye).
+
+Okuma kalitesi tarayıcının Türkçe sesine bağlıdır. En doğal sesler: Microsoft Edge'de
+"Emel Online (Natural)", macOS'ta Sistem Ayarları → Erişilebilirlik → Seslendirilen İçerik
+bölümünden indirilen "Yelda (Gelişmiş/Premium)". Oyun bu sesleri varsa kendiliğinden seçer.
 
 Klavye (öğretmen için): `Boşluk` / `Enter` kelimeyi yeniden oku / sonraki, `F` tam ekran, `Esc` menü.
 

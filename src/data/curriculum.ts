@@ -28,7 +28,10 @@ export interface Group {
   tables: Table[];
 }
 
-const isProper = (w: string) => w[0] !== lowerTr(w[0]);
+export const isProper = (w: string) => w[0] !== lowerTr(w[0]);
+
+/** Oyunda bir kelimede en çok bu kadar bulut olur. */
+export const MAX_SYLLABLES = 5;
 
 function buildCurriculum(): Group[] {
   const known = new Set<string>();

@@ -1,6 +1,7 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import { C, H, W, setTextResolution } from './theme';
 import { loadSettings, saveSettings, type Settings } from './settings';
+import { configureAudio } from './audio';
 
 export interface Scene {
   view: Container;
@@ -32,7 +33,10 @@ export class Game {
     this.app.renderer.on('resize', () => this.layout());
     this.layout();
 
+    configureAudio(this.settings);
     window.addEventListener('keydown', (e) => {
+      // Kelime penceresinde yazarken kısayollar çalışmasın.
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
       if (e.key === 'f' || e.key === 'F') this.toggleFullscreen();
       else this.scene?.onKey?.(e);
     });
@@ -67,6 +71,7 @@ export class Game {
 
   save() {
     saveSettings(this.settings);
+    configureAudio(this.settings);
   }
 
   toggleFullscreen() {

@@ -1,5 +1,18 @@
 import { lowerTr } from './data/syllabify';
 
+/** on: efektler + sesli okuma, effects: yalnız efektler, off: hiç ses yok. */
+export type SoundMode = 'on' | 'effects' | 'off';
+
+let mode: SoundMode = 'on';
+let preferredVoice = '';
+
+export function configureAudio(opts: { sound: SoundMode; voice: string }) {
+  mode = opts.sound;
+  preferredVoice = opts.voice;
+  pickVoice();
+  if (mode !== 'on' && 'speechSynthesis' in window) speechSynthesis.cancel();
+}
+
 let ctx: AudioContext | null = null;
 
 function audio(): AudioContext {
@@ -9,6 +22,7 @@ function audio(): AudioContext {
 }
 
 function tone(freq: number, at: number, dur: number, type: OscillatorType = 'sine', gain = 0.18) {
+  if (mode === 'off') return;
   const a = audio();
   const t0 = a.currentTime + at;
   const osc = a.createOscillator();
@@ -39,23 +53,52 @@ export const sfx = {
 
 // --- Sesli okuma (tarayıcının Türkçe sesi varsa) ---
 
+/**
+ * Tarayıcıların Türkçe sesleri arasında kalite farkı büyük. Adında bunlar
+ * geçenler (Edge'in "Emel Online (Natural)", macOS'un "Yelda (Premium)" gibi)
+ * çok daha doğal okuduğu için önce onlar seçilir.
+ */
+const QUALITY = [/natural/i, /neural/i, /premium/i, /enhanced|gelişmiş/i, /online/i, /google/i];
+const rank = (v: SpeechSynthesisVoice) => {
+  const i = QUALITY.findIndex((r) => r.test(v.name));
+  return i < 0 ? QUALITY.length : i;
+};
+
+let voices: SpeechSynthesisVoice[] = [];
 let voice: SpeechSynthesisVoice | null = null;
+const listeners = new Set<() => void>();
+
+function loadVoices() {
+  voices = speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang.toLowerCase().replace('_', '-').startsWith('tr'))
+    .sort((a, b) => rank(a) - rank(b));
+  pickVoice();
+  listeners.forEach((f) => f());
+}
 
 function pickVoice() {
-  if (!('speechSynthesis' in window)) return;
-  const voices = speechSynthesis.getVoices();
-  voice = voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith('tr')) ?? null;
+  voice = voices.find((v) => v.name === preferredVoice) ?? voices[0] ?? null;
 }
 
 if ('speechSynthesis' in window) {
-  pickVoice();
-  speechSynthesis.addEventListener('voiceschanged', pickVoice);
+  loadVoices();
+  speechSynthesis.addEventListener('voiceschanged', loadVoices);
 }
 
-export const canSpeak = () => voice !== null;
+/** Kullanılabilir Türkçe sesler, en iyisi başta. */
+export const turkishVoices = () => voices;
+export const currentVoice = () => voice;
 
-export function speak(text: string, rate = 0.8) {
-  if (!voice) return;
+/** Ses listesi değişince haber verir; aboneliği bırakan fonksiyonu döner. */
+export function onVoicesChanged(f: () => void): () => void {
+  listeners.add(f);
+  return () => listeners.delete(f);
+}
+
+/** `force`: ses ayarı kapalı olsa bile oku (öğretmenin ses denemesi için). */
+export function speak(text: string, rate = 0.8, force = false) {
+  if (!voice || (mode !== 'on' && !force)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(lowerTr(text));
   u.voice = voice;

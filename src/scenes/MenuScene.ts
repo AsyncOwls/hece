@@ -1,13 +1,54 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Game, Scene } from '../game';
-import { CURRICULUM, wordPool } from '../data/curriculum';
+import { CURRICULUM } from '../data/curriculum';
+import { parseCustomWords } from '../data/custom';
 import { Button } from '../ui/Button';
 import { fullscreenIcon } from '../ui/icons';
+import { openWordEditor } from '../ui/WordEditor';
 import { C, GROUP_COLORS, W, label } from '../theme';
+import { currentVoice, onVoicesChanged, sfx, speak, turkishVoices, type SoundMode } from '../audio';
+import { currentTable, gamePool } from './common';
 import { SkyScene } from './SkyScene';
-import { sfx } from '../audio';
 
 const DISTRACTOR_STEPS = [0, 2, 4];
+const SOUND_STEPS: SoundMode[] = ['on', 'effects', 'off'];
+const SOUND_LABELS: Record<SoundMode, string> = { on: 'Açık', effects: 'Okuma kapalı', off: 'Sessiz' };
+
+const CARD_Y = 140;
+const CARD_H = 650;
+const OPTIONS_Y = 885;
+
+function tappable<T extends Container>(c: T, onTap: () => void): T {
+  c.eventMode = 'static';
+  c.cursor = 'pointer';
+  c.on('pointertap', onTap);
+  return c;
+}
+
+/** Onay kutusu ve yazısı; sol kenarı (0, 0) noktasında. */
+function checkRow(text: string, on: boolean, size: number, fontSize: number, bold: boolean, onTap: () => void) {
+  const box = new Graphics().roundRect(0, -size / 2, size, size, size * 0.22);
+  if (on) {
+    box.fill(C.green);
+    box
+      .moveTo(size * 0.24, 0)
+      .lineTo(size * 0.43, size * 0.2)
+      .lineTo(size * 0.77, -size * 0.2)
+      .stroke({ width: size * 0.14, color: C.white, cap: 'round', join: 'round' });
+  } else {
+    box.fill(C.white).stroke({ width: 4, color: C.line });
+  }
+  const t = label(text, fontSize, on ? C.ink : C.muted, { fontWeight: bold ? '700' : '400' });
+  t.anchor.set(0, 0.5);
+  t.x = size + 18;
+  const hit = new Graphics().rect(-10, -size / 2 - 10, t.x + t.width + 20, size + 20).fill({ color: 0xffffff, alpha: 0.001 });
+  const row = new Container();
+  row.addChild(hit, box, t);
+  return tappable(row, () => {
+    sfx.click();
+    onTap();
+  });
+}
 
 /** İki satırlı ayar butonu: üstte başlık, altta değer. */
 class OptionButton extends Container {
@@ -18,12 +59,10 @@ class OptionButton extends Container {
     super();
     const t = label(title, 30, C.muted, { fontWeight: '400' });
     t.y = -24;
-    this.value = label('', 42, C.ink);
+    this.value = label('', 38, C.ink);
     this.value.y = 22;
     this.addChild(this.bg, t, this.value);
-    this.eventMode = 'static';
-    this.cursor = 'pointer';
-    this.on('pointertap', () => {
+    tappable(this, () => {
       sfx.click();
       onTap();
     });
@@ -39,126 +78,157 @@ class OptionButton extends Container {
   }
 }
 
+/**
+ * Öğretmen ekranı. Solda harf tablosu kelimeleri, sağda öğretmenin kendi
+ * kelimeleri; ikisi ayrı ayrı açılıp kapanır (ikisi açıksa kelimeler karışır).
+ */
 export class MenuScene implements Scene {
   view = new Container();
-  private groupLayer = new Container();
-  private tableLayer = new Container();
-  private info: Text;
-  private options: { btn: OptionButton; refresh: () => void }[] = [];
+  private body = new Container();
+  private offVoices: () => void;
 
   constructor(private game: Game) {
-    const title = label('Hece Birleştir', 110, C.red, { fontWeight: '700' });
-    title.position.set(W / 2, 95);
-    const sub = label('Öğretmen ayarları', 40, C.muted, { fontWeight: '400' });
-    sub.position.set(W / 2, 180);
-
+    const title = label('Hece Birleştir', 76, C.red);
+    title.position.set(W / 2, 70);
     const fs = new Button({ width: 110, height: 100, color: C.ink, outline: true, icon: fullscreenIcon(C.ink), onTap: () => game.toggleFullscreen() });
     fs.position.set(W - 85, 70);
-
-    this.info = label('', 34, C.muted, { fontWeight: '400' });
-    this.info.position.set(W / 2, 600);
-
-    this.view.addChild(title, sub, fs, this.groupLayer, this.tableLayer, this.info);
-    this.buildOptions();
-    this.buildStartButtons();
+    this.view.addChild(title, fs, this.body);
+    // Tarayıcı sesleri geç yükleyebilir; gelince ses satırı güncellensin.
+    this.offVoices = onVoicesChanged(() => this.refresh());
     this.refresh();
   }
 
-  private get table() {
-    const all = CURRICULUM.flatMap((g) => g.tables);
-    return all[Math.min(this.game.settings.table, all.length - 1)];
+  private get s() {
+    return this.game.settings;
+  }
+
+  /** Ayarı değiştirir, kaydeder ve ekranı yeniden çizer. */
+  private change(fn: () => void) {
+    fn();
+    this.game.save();
+    this.refresh();
   }
 
   private refresh() {
-    this.drawGroups();
-    this.drawTables();
-    this.options.forEach((o) => o.refresh());
-    const n = wordPool(this.table, this.game.settings).length;
-    this.info.text = `Bu seçimle ${n} kelime var`;
+    this.body.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.drawTableCard();
+    this.drawMineCard();
+    this.drawOptions();
+    this.drawStart();
   }
 
-  private drawGroups() {
-    this.groupLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
-    const w = 330;
-    const gap = 26;
-    const x0 = W / 2 - (CURRICULUM.length * w + (CURRICULUM.length - 1) * gap) / 2 + w / 2;
+  /** Kart çerçevesi ve başlıktaki onay kutusu; içeriğin ekleneceği katmanı döner. */
+  private card(x: number, w: number, on: boolean, title: string, toggle: () => void): Container {
+    const bg = new Graphics();
+    bg.roundRect(x, CARD_Y + 6, w, CARD_H, 32).fill({ color: 0x000000, alpha: 0.08 });
+    bg.roundRect(x, CARD_Y, w, CARD_H, 32).fill(C.white).stroke({ width: 5, color: on ? C.green : C.line });
+    const head = checkRow(title, on, 54, 42, true, toggle);
+    head.position.set(x + 44, CARD_Y + 62);
+    const content = new Container();
+    content.alpha = on ? 1 : 0.4;
+    this.body.addChild(bg, head, content);
+    return content;
+  }
+
+  private drawTableCard() {
+    const s = this.s;
+    const selected = currentTable(s);
+    const body = this.card(60, 1180, s.useTable, 'Harf tablosu kelimeleri', () => this.toggleSource('useTable'));
+
     CURRICULUM.forEach((group, gi) => {
-      const selected = this.table.groupIndex === gi;
+      const y = CARD_Y + 150 + gi * 86;
       const color = GROUP_COLORS[gi];
-      const letters = group.tables.map((t) => t.label).join(' ');
-      const b = new Button({
-        width: w,
-        height: 180,
-        color,
-        outline: !selected,
-        text: '',
-        onTap: () => {
-          this.game.settings.table = group.tables[0].order;
-          this.game.save();
-          this.refresh();
-        },
-      });
-      const name = label(group.name, 36, selected ? C.white : color, { fontWeight: '400' });
-      name.y = -40;
-      const ls = label(letters, letters.length > 11 ? 44 : 52, selected ? C.white : color);
-      ls.y = 25;
-      b.addChild(name, ls);
-      b.position.set(x0 + gi * (w + gap), 330);
-      this.groupLayer.addChild(b);
+      const name = label(group.name, 30, color, { fontWeight: '400' });
+      name.anchor.set(0, 0.5);
+      name.position.set(104, y);
+      body.addChild(name);
+
+      let x = 330;
+      for (const t of group.tables) {
+        const w = t.label.length > 2 ? 220 : 100;
+        const b = new Button({
+          width: w,
+          height: 70,
+          color,
+          outline: t.order !== selected.order,
+          text: t.label,
+          fontSize: 42,
+          onTap: () =>
+            this.change(() => {
+              s.table = t.order;
+              s.useTable = true;
+            }),
+        });
+        b.position.set(x + w / 2, y);
+        x += w + 14;
+        body.addChild(b);
+      }
     });
+
+    const y = CARD_Y + CARD_H - 58;
+    const cumulative = checkRow('Önceki tabloları da kat', s.cumulative, 40, 32, false, () =>
+      this.change(() => (s.cumulative = !s.cumulative)),
+    );
+    cumulative.position.set(104, y);
+    const proper = checkRow('Özel isimler (Ali, Lale…)', s.proper, 40, 32, false, () =>
+      this.change(() => (s.proper = !s.proper)),
+    );
+    proper.position.set(640, y);
+    body.addChild(cumulative, proper);
   }
 
-  private drawTables() {
-    this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
-    const group = CURRICULUM[this.table.groupIndex];
-    const color = GROUP_COLORS[this.table.groupIndex];
-    const caption = label('Harf tablosu:', 38, C.muted, { fontWeight: '400' });
-    caption.anchor.set(1, 0.5);
+  private drawMineCard() {
+    const s = this.s;
+    const { words } = parseCustomWords(s.customWords);
+    const x = 1270;
+    const w = 590;
+    const cx = x + w / 2;
+    const body = this.card(x, w, s.useMine, 'Benim kelimelerim', () => this.toggleSource('useMine'));
 
-    const sizes = group.tables.map((t) => (t.label.length > 2 ? 280 : 140));
-    const gap = 22;
-    const total = sizes.reduce((a, b) => a + b, 0) + gap * (sizes.length - 1);
-    let x = W / 2 - total / 2 + 110;
-    caption.position.set(x - 30, 490);
-    this.tableLayer.addChild(caption);
-
-    group.tables.forEach((t, i) => {
-      const selected = t.order === this.table.order;
-      const b = new Button({
-        width: sizes[i],
-        height: 120,
-        color,
-        outline: !selected,
-        text: t.label,
-        fontSize: 60,
-        onTap: () => {
-          this.game.settings.table = t.order;
-          this.game.save();
-          this.refresh();
-        },
+    if (words.length) {
+      const n = label(`${words.length} kelime`, 40, C.ink);
+      n.position.set(cx, CARD_Y + 150);
+      let list = '';
+      for (const word of words) {
+        const part = word.syllables.join('-');
+        if (list.length + part.length > 150) {
+          list += '  …';
+          break;
+        }
+        list += (list ? '   ' : '') + part;
+      }
+      const preview = label(list, 32, C.muted, { fontWeight: '400', wordWrap: true, wordWrapWidth: w - 90, lineHeight: 48 });
+      preview.anchor.set(0.5, 0);
+      preview.position.set(cx, CARD_Y + 200);
+      body.addChild(n, preview);
+    } else {
+      const hint = label('Kendi kelimelerinizi yazın;\nhecelere kendiliğinden ayrılır.', 32, C.muted, {
+        fontWeight: '400',
+        lineHeight: 48,
       });
-      b.position.set(x + sizes[i] / 2, 490);
-      x += sizes[i] + gap;
-      this.tableLayer.addChild(b);
+      hint.position.set(cx, CARD_Y + 300);
+      body.addChild(hint);
+    }
+
+    // Kart kapalıyken de soluk görünmesin: kelime yazmak her zaman mümkün.
+    const edit = new Button({
+      width: 420,
+      height: 96,
+      color: C.blue,
+      text: words.length ? 'Düzenle' : 'Kelime Yaz',
+      fontSize: 44,
+      onTap: () => this.editWords(),
     });
+    edit.position.set(cx, CARD_Y + CARD_H - 75);
+    this.body.addChild(edit);
   }
 
-  private buildOptions() {
-    const s = this.game.settings;
-    const defs: { title: string; value: () => [string, boolean]; tap: () => void }[] = [
-      {
-        title: 'Önceki tablolar',
-        value: () => [s.cumulative ? 'Dahil' : 'Yalnız bu tablo', s.cumulative],
-        tap: () => (s.cumulative = !s.cumulative),
-      },
-      {
-        title: 'Özel isimler',
-        value: () => [s.proper ? 'Dahil' : 'Hariç', s.proper],
-        tap: () => (s.proper = !s.proper),
-      },
+  private drawOptions() {
+    const s = this.s;
+    const defs: { title: string; value: [string, boolean]; tap: () => void }[] = [
       {
         title: 'Fazladan hece',
-        value: () => [s.distractors === 0 ? 'Yok' : `${s.distractors} tane`, s.distractors > 0],
+        value: [s.distractors === 0 ? 'Yok' : `${s.distractors} tane`, s.distractors > 0],
         tap: () => {
           const i = DISTRACTOR_STEPS.indexOf(s.distractors);
           s.distractors = DISTRACTOR_STEPS[(i + 1) % DISTRACTOR_STEPS.length];
@@ -166,43 +236,95 @@ export class MenuScene implements Scene {
       },
       {
         title: 'Hedef kelime',
-        value: () => [s.showWord ? 'Bulutta soluk' : 'Gizli (dinle)', s.showWord],
+        value: [s.showWord ? 'Bulutta soluk' : 'Gizli', s.showWord],
         tap: () => (s.showWord = !s.showWord),
       },
+      {
+        title: 'Hece rengi',
+        value: [s.oneColor ? 'Tek renk' : 'Renkli', !s.oneColor],
+        tap: () => (s.oneColor = !s.oneColor),
+      },
+      {
+        title: 'Ses',
+        value: [SOUND_LABELS[s.sound], s.sound === 'on'],
+        tap: () => (s.sound = SOUND_STEPS[(SOUND_STEPS.indexOf(s.sound) + 1) % SOUND_STEPS.length]),
+      },
     ];
-    const w = 400;
-    const gap = 30;
-    const x0 = W / 2 - (defs.length * w + (defs.length - 1) * gap) / 2 + w / 2;
     defs.forEach((d, i) => {
-      const btn = new OptionButton(d.title, w, 120, () => {
-        d.tap();
-        this.game.save();
-        this.refresh();
-      });
-      btn.position.set(x0 + i * (w + gap), 730);
-      this.view.addChild(btn);
-      this.options.push({ btn, refresh: () => btn.set(...d.value()) });
+      const b = new OptionButton(d.title, 282, 120, () => this.change(d.tap));
+      b.set(...d.value);
+      b.position.set(201 + i * 300, OPTIONS_Y);
+      this.body.addChild(b);
     });
+
+    if (s.sound !== 'on') return;
+    const voices = turkishVoices();
+    const voice = currentVoice();
+    const name = voice?.name.replace(/^Microsoft\s+/, '').replace(/\s*-\s*Turkish.*$/i, '');
+    const text = voice
+      ? `Okuyan ses: ${name}   ›  ${voices.length > 1 ? 'değiştir' : 'dinle'}`
+      : 'Bu tarayıcıda Türkçe okuma sesi bulunamadı';
+    const row = label(text, 28, voice ? C.blue : C.red, { fontWeight: '400' });
+    row.anchor.set(0, 0.5);
+    row.position.set(66, 1005);
+    this.body.addChild(row);
+    if (voice) tappable(row, () => this.nextVoice());
   }
 
-  private buildStartButtons() {
+  private drawStart() {
+    const n = gamePool(this.s).length;
     const play = new Button({
-      width: 620,
-      height: 150,
-      color: C.green,
+      width: 600,
+      height: 140,
+      color: n > 0 ? C.green : C.line,
       text: 'Oyunu Başlat',
-      fontSize: 66,
+      fontSize: 62,
       onTap: () => this.start(),
     });
-    play.position.set(W / 2, 925);
-    const hint = label('Oyundayken ayarlara dönmek için sağ üstteki çarka basılı tutun (ya da Esc).', 30, C.muted, {
+    play.position.set(1560, OPTIONS_Y);
+    const info = label(n > 0 ? `Bu seçimle ${n} kelime var` : 'Bu seçimle kelime yok', 30, n > 0 ? C.muted : C.red, {
       fontWeight: '400',
     });
-    hint.position.set(W / 2, 1035);
-    this.view.addChild(play, hint);
+    info.position.set(1560, 1000);
+    const hint = label('Oyundan çıkmak için sağ üstteki çarka basılı tutun.', 24, C.muted, { fontWeight: '400' });
+    hint.position.set(1560, 1042);
+    this.body.addChild(play, info, hint);
+  }
+
+  /** Kaynağı açar/kapar; ikisi birden kapanamaz. */
+  private toggleSource(which: 'useTable' | 'useMine') {
+    const s = this.s;
+    const other = which === 'useTable' ? 'useMine' : 'useTable';
+    if (which === 'useMine' && !s.useMine && parseCustomWords(s.customWords).words.length === 0) {
+      return this.editWords();
+    }
+    if (s[which] && !s[other]) return sfx.wrong();
+    this.change(() => (s[which] = !s[which]));
+  }
+
+  private editWords() {
+    openWordEditor(this.s.customWords, (text) =>
+      this.change(() => {
+        const s = this.s;
+        s.customWords = text;
+        if (parseCustomWords(text).words.length > 0) s.useMine = true;
+        else {
+          s.useMine = false;
+          s.useTable = true;
+        }
+      }),
+    );
+  }
+
+  private nextVoice() {
+    const voices = turkishVoices();
+    const next = voices[(voices.indexOf(currentVoice()!) + 1) % voices.length];
+    this.change(() => (this.s.voice = next.name));
+    speak('araba, kalem, kaplumbağa', 0.8, true);
   }
 
   private start() {
+    if (gamePool(this.s).length === 0) return sfx.wrong();
     this.game.go((g) => new SkyScene(g));
   }
 
@@ -210,5 +332,7 @@ export class MenuScene implements Scene {
     if (e.key === 'Enter') this.start();
   }
 
-  destroy() {}
+  destroy() {
+    this.offVoices();
+  }
 }
