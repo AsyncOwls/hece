@@ -48,11 +48,12 @@ describe('shared game address', () => {
   });
 
   it('carries Heceleri Bul with its board size and the syllable game words', () => {
-    const { mode, settings: s } = decodeShared(encodeShared({ ...teacher, tab: 'sentence', sortSize: 6 }, 'sort'))!;
+    const { mode, settings: s } = decodeShared(encodeShared({ ...teacher, tab: 'sentence', sortSize: 2 }, 'sort'))!;
     expect(mode).toBe('sort');
     expect(s.tab).toBe('sort');
-    expect(s.sortSize).toBe(6);
+    expect(s.sortSize).toBe(2);
     expect(decodeShared(encodeShared({ ...teacher, sortSize: 5 }, 'sort'))!.settings.sortSize).toBe(4);
+    expect(decodeShared(encodeShared({ ...teacher, sortSize: 6 }, 'sort'))!.settings.sortSize).toBe(4);
     expect(gamePool(s).map((w) => w.text)).toEqual(gamePool(teacher).map((w) => w.text));
   });
 

@@ -3,7 +3,7 @@ import type { Game, Scene } from '../game';
 import { MAX_SYLLABLES, type Word } from '../data/curriculum';
 import { lowerTr } from '../data/syllabify';
 import { Button } from '../ui/Button';
-import { playIcon } from '../ui/icons';
+import { checkIcon } from '../ui/icons';
 import { CARD_H, SyllableCard, cardWidthFor } from '../ui/SyllableCard';
 import { Dragger } from '../ui/drag';
 import { confetti } from '../ui/confetti';
@@ -18,8 +18,8 @@ const CLOUD_Y = 420;
 const CLOUD_H = 230;
 const TRAY_Y = [800, 965];
 const GAP = 40;
-/** Kelime tamamlandıktan sonra bir sonrakine geçmeden önce beklenen süre. */
-const CELEBRATE_MS = 3600;
+/** Gökkuşağının altındaki ✓ düğmesinin yeri (çimenin üstü). */
+const TICK_Y = 870;
 
 /** Hecenin bırakılacağı bulut. Boşken dokunulursa kelime yeniden okunur. */
 class CloudSlot extends Container {
@@ -69,7 +69,8 @@ class CloudSlot extends Container {
 /**
  * Çocukların gördüğü tek ekran: gökyüzünde boş bulutlar ve aşağıda heceler.
  * Heceler doğru sırayla bulutlara konunca kelime tek bulutta birleşir ve
- * gökkuşağı çıkar. Ayarlar yalnızca öğretmen içindir (sağ üstte basılı tut).
+ * gökkuşağı çıkar; ardından altta ✓ belirir, çocuk kelimeyi okuyup ✓'e basınca
+ * sıradaki kelimeye geçilir. Ayarlar yalnızca öğretmen içindir (sağ üstte basılı tut).
  */
 export class SkyScene implements Scene {
   view = new Container();
@@ -89,6 +90,8 @@ export class SkyScene implements Scene {
   private slots: CloudSlot[] = [];
   private cards: SyllableCard[] = [];
   private dragger: Dragger<SyllableCard>;
+  /** Kelime tamamlanınca çıkan ✓; basılınca sıradaki kelime. */
+  private tick: Button | null = null;
   private done = false;
   private finished = false;
   private alive = true;
@@ -210,7 +213,12 @@ export class SkyScene implements Scene {
   }
 
   private async next() {
-    if (!this.done || this.finished) return;
+    // ✓ çıkmadan (ya da ikinci kez basılınca) geçilmez.
+    const tick = this.tick;
+    if (!this.done || this.finished || !tick) return;
+    this.tick = null;
+    tick.eventMode = 'none';
+    void tween(tick, { scale: 0, alpha: 0 }, 250).then(() => tick.destroy({ children: true }));
     this.turn++;
     this.index++;
     if (this.index >= this.words.length) return this.finale();
@@ -242,18 +250,21 @@ export class SkyScene implements Scene {
     confetti(this.view, W / 2 + 400, CLOUD_Y, 70);
     void wait(500).then(() => this.alive && confetti(this.view, W / 2, CLOUD_Y - 100, 90));
 
-    const again = new Button({
-      width: 200,
-      height: 200,
-      radius: 100,
-      color: C.green,
-      icon: playIcon(C.white),
-      onTap: () => this.game.go((g) => new SkyScene(g)),
+    // ✓ gökkuşağı tamamlandıktan sonra altta belirir; basınca yeni tur.
+    const shown = this.rainbow.shown ? wait(300) : this.rainbow.show(1100);
+    void shown.then(() => {
+      if (this.alive) this.showTick(200, () => this.game.go((g) => new SkyScene(g)));
     });
-    again.position.set(W / 2, 870);
-    again.scale.set(0.2);
-    this.overlay.addChild(again);
-    void wait(600).then(() => tween(again, { scale: 1 }, 450, easeOutBack));
+  }
+
+  /** Gökkuşağının altında büyüyerek beliren yeşil ✓. */
+  private showTick(size: number, onTap: () => void): Button {
+    const b = new Button({ width: size, height: size, radius: size / 2, color: C.green, icon: checkIcon(C.white, size * 0.26), onTap });
+    b.position.set(W / 2, TICK_Y);
+    b.scale.set(0.2);
+    this.overlay.addChild(b);
+    void tween(b, { scale: 1 }, 450, easeOutBack);
+    return b;
   }
 
   // --- Yerleştirme ---
@@ -328,12 +339,12 @@ export class SkyScene implements Scene {
     if (!this.alive) return;
 
     sfx.win();
-    void this.rainbow.show(1100);
     confetti(this.view, W / 2, CLOUD_Y, 60);
     void wait(400).then(() => this.alive && speak(this.word.text, 0.75));
 
-    await wait(CELEBRATE_MS);
-    if (this.alive && turn === this.turn) void this.next();
+    // Gökkuşağı tamamlanınca altta ✓ çıkar; çocuk okuyup basınca sıradaki kelime.
+    await this.rainbow.show(1100);
+    if (this.alive && turn === this.turn) this.tick = this.showTick(170, () => void this.next());
   }
 
   // --- Yardımcılar ---

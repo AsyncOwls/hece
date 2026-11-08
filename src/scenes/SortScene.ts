@@ -1,12 +1,12 @@
 import { Container, Graphics, Text, Ticker } from 'pixi.js';
 import type { Game, Scene } from '../game';
-import { buildSortBoard, canFormWords, pairKey, pickSortWords, rowBlocked, sortSize, sortWordCount } from '../data/sort';
+import { buildSortBoard, canFormWords, canMerge, pairKey, pickSortWords, rowBlocked, sortSize, sortWordCount } from '../data/sort';
 import { Button } from '../ui/Button';
-import { playIcon } from '../ui/icons';
+import { checkIcon } from '../ui/icons';
 import { Dragger } from '../ui/drag';
 import { confetti } from '../ui/confetti';
 import { TeacherGear } from '../ui/TeacherGear';
-import { RAINBOW, Rainbow, SKY, SkyBackdrop, cloudTextY, drawCloud, hills } from '../ui/sky';
+import { RAINBOW, Rainbow, SKY, SkyBackdrop, hills } from '../ui/sky';
 import { C, H, W, darken, label } from '../theme';
 import { easeInOut, easeOutBack, tween, wait } from '../tween';
 import { sfx, speak } from '../audio';
@@ -16,6 +16,14 @@ import { sortPairs, sortWords } from './common';
 const MERGE_COLORS = RAINBOW;
 /** Tahtanın düz arka plan rengi (açık gök mavisi, opak). */
 const BOARD_COLOR = 0xa9dcf8;
+/**
+ * Oyun bitince tahtanın sığdırıldığı alan: üstünde gökkuşağı görünür, altında
+ * ✓ düğmesine yer kalır.
+ */
+const WIN_BOX = { top: 350, bottom: 860, width: 1100 };
+/** Bitişteki ✓ düğmesi. */
+const TICK_SIZE = 180;
+const TICK_Y = H - 110;
 /** Sarı zeminde beyaz yazı okunmaz. */
 const textOn = (color: number) => (color === 0xfdd835 ? C.ink : C.white);
 
@@ -145,7 +153,8 @@ class Candy extends Container {
  * (sürükleyerek ya da sırayla iki bloğa dokunarak). Aynı satırda yan yana gelen
  * iki hece bir kelime olunca bloklar birleşir, renklenir ve yerinde sabit kalır.
  * Gökyüzünde geçer: birleşen kelimeler sırayla gökkuşağının renklerini alır,
- * oyun bitince büyük gökkuşağı çıkar.
+ * oyun bitince tahta görünür kalır, arkasında büyük gökkuşağı, ardından altta
+ * yeşil ✓ (yeni tur) çıkar.
  */
 export class SortScene implements Scene {
   view = new Container();
@@ -159,8 +168,11 @@ export class SortScene implements Scene {
   /** Birleşmesi kabul edilen hece çiftleri (okunabilen tüm iki heceli kelimeler). */
   private pairs = new Set<string>();
   private colors = MERGE_COLORS;
-  private rainbow = new Rainbow(W / 2, 790, 640, 38);
+  /** Bitişte tahtanın arkasında, onu çevreleyen büyük gökkuşağı. */
+  private rainbow = new Rainbow(W / 2, 900, 860, 44);
   private mergedCount = 0;
+  /** Tahtanın (kenar boşluğuyla) boyutu; ortası ekranın ortası. */
+  private boardSize = { w: 0, h: 0 };
   private blocks: Block[] = [];
   private selected: Tile | null = null;
   private target: Tile | null = null;
@@ -215,6 +227,7 @@ export class SortScene implements Scene {
     const bw = n * this.cellW + (n - 1) * this.gap;
     const bh = n * this.cellH + (n - 1) * this.gap;
     const pad = 30;
+    this.boardSize = { w: bw + pad * 2, h: bh + pad * 2 };
     // Oyun alanının arkası düz, opak tek renk: gökyüzü ve tepeler arkada kalır, heceler net görünür.
     const board = new Graphics()
       .roundRect(W / 2 - bw / 2 - pad, H / 2 - bh / 2 - pad, bw + pad * 2, bh + pad * 2, 40)
@@ -327,6 +340,8 @@ export class SortScene implements Scene {
         const right = this.tiles[r];
         if (!left || !right) continue;
         if (!this.pairs.has(pairKey(left.syllable, right.syllable))) continue;
+        // Kalan heceleri kelimesiz bırakacak birleşme olmaz: oyun hep tahta dolunca biter.
+        if (!canMerge(this.freeSyllables(), left.syllable, right.syllable, this.pairs)) continue;
         this.merge(left, right);
         break;
       }
@@ -347,8 +362,7 @@ export class SortScene implements Scene {
     const from = this.blockPos(l);
     const moved = this.unblockRow(Math.floor(l / this.n));
     // Tahtada yer kalmadıysa ya da kalan hecelerle artık kelime kurulamıyorsa oyun biter.
-    const free = this.tiles.filter((t): t is Tile => t !== null).map((t) => t.syllable);
-    const over = this.blocks.length >= sortWordCount(this.n) || !canFormWords(free, 1, this.pairs);
+    const over = this.blocks.length >= sortWordCount(this.n) || !canFormWords(this.freeSyllables(), 1, this.pairs);
     if (over) this.won = true;
     void this.showMerge(left, right, block, from, text, moved, over);
   }
@@ -407,8 +421,13 @@ export class SortScene implements Scene {
 
     if (over) {
       await wait(1200);
-      if (this.alive) this.win();
+      if (this.alive) void this.win();
     }
+  }
+
+  /** Henüz kelimeye katılmamış heceler. */
+  private freeSyllables() {
+    return this.tiles.filter((t): t is Tile => t !== null).map((t) => t.syllable);
   }
 
   /** İki hücrelik bloğun ortası. */
@@ -450,31 +469,38 @@ export class SortScene implements Scene {
     return moved;
   }
 
-  /** Oyun bitti: tahta solar, büyük gökkuşağı, "Aferin!" bulutu ve yeniden oyna. */
-  private win() {
+  /**
+   * Oyun bitti: tahta görünür kalır, küçülüp yukarı kayar; önce arkasında
+   * gökkuşağı çizilir, sonra altta yeşil ✓ (yeniden oyna) çıkar.
+   */
+  private async win() {
     this.won = true;
-    for (const layer of [this.boardLayer, this.blockLayer, this.tileLayer]) void tween(layer, { alpha: 0.18 }, 400);
-    void this.rainbow.show(1100);
-
-    const t = label('Aferin!', 130, C.red);
-    const bw = t.width + 200;
-    const cloud = new Graphics();
-    drawCloud(cloud, W / 2, 420, bw, 290, SKY.cloud, 7, SKY.cloudEdge);
-    t.position.set(W / 2, cloudTextY(420, 290) - 8);
-    this.overlay.addChild(cloud, t);
-    t.scale.set(0.3);
-    void tween(t, { scale: 1 }, 500, easeOutBack);
+    this.select(null);
+    const { w, h } = this.boardSize;
+    const s = Math.min(1, (WIN_BOX.bottom - WIN_BOX.top) / h, WIN_BOX.width / w);
+    const cy = (WIN_BOX.top + WIN_BOX.bottom) / 2;
+    const to = { x: W / 2 - (s * W) / 2, y: cy - (s * H) / 2, scale: s };
+    await Promise.all([this.boardLayer, this.blockLayer, this.tileLayer].map((l) => tween(l, to, 500, easeInOut)));
+    if (!this.alive) return;
 
     sfx.win();
-    confetti(this.view, W / 2 - 400, 420, 70);
-    confetti(this.view, W / 2 + 400, 420, 70);
-    void wait(500).then(() => this.alive && confetti(this.view, W / 2, 320, 90));
+    confetti(this.view, W / 2 - 600, 300, 60);
+    confetti(this.view, W / 2 + 600, 300, 60);
+    await this.rainbow.show(1100);
+    if (!this.alive) return;
 
-    const again = new Button({ width: 200, height: 200, radius: 100, color: C.green, icon: playIcon(C.white), onTap: () => this.again() });
-    again.position.set(W / 2, 870);
+    const again = new Button({
+      width: TICK_SIZE,
+      height: TICK_SIZE,
+      radius: TICK_SIZE / 2,
+      color: C.green,
+      icon: checkIcon(C.white, TICK_SIZE * 0.26),
+      onTap: () => this.again(),
+    });
+    again.position.set(W / 2, TICK_Y);
     again.scale.set(0.2);
     this.overlay.addChild(again);
-    void wait(600).then(() => tween(again, { scale: 1 }, 450, easeOutBack));
+    void tween(again, { scale: 1 }, 450, easeOutBack);
   }
 
   private again() {

@@ -5,9 +5,9 @@ import { lowerTr } from './syllabify';
  * Heceleri Bul tahta boyutları (n×n). Hep çift: kelimeler satır içinde yan yana
  * kurulur (soldan sağa okunur), her satır tam kelimelere bölünür, hece artmaz.
  */
-export const SORT_SIZES = [2, 4, 6];
+export const SORT_SIZES = [2, 4];
 
-/** Kayıtlı ya da adresten gelen boyut geçerli değilse (eski 3×3, 5×5) 4×4. */
+/** Kayıtlı ya da adresten gelen boyut geçerli değilse (eski 3×3, 5×5, 6×6) 4×4. */
 export const sortSize = (n: number) => (SORT_SIZES.includes(n) ? n : 4);
 
 /** n×n tahtadaki kelime sayısı. */
@@ -57,8 +57,8 @@ export function hasReadyWord(cells: string[], n: number, keys: Set<string>): boo
  * kurulu olmasın diye birkaç kez karıştırılır.
  *
  * Tahtaya konan kelimelerle her zaman çözülebilir. Çocuk başka bir okunabilen kelime
- * kurarsa (ör. "anten" ve "nane"nin hecelerinden "anne") o da birleşir; kalan
- * hecelerle artık kelime kurulamıyorsa oyun biter (bkz. canFormWords). Satırı
+ * kurarsa o da birleşir, yeter ki kalan heceler yine tam kelimelere bölünebilsin
+ * (bkz. canMerge); böylece oyun hep tahta dolunca biter. Satırı
  * tıkayan birleşmelerde bloklar kenara kaydırılır (bkz. rowBlocked).
  */
 export function buildSortBoard(words: Word[], n: number, keys: Set<string> = pairSet(words), rand: Rand = Math.random): string[] {
@@ -124,4 +124,19 @@ export function canFormWords(syllables: string[], need: number, pairs: Set<strin
     return ok;
   };
   return go(syllables.length, need);
+}
+
+/**
+ * Serbest hecelerden `left` + `right` birleşirse kalanların hepsi yine kelimelere
+ * bölünebilir mi. Örn. tahtada "anten" ve "nane" varken "anne" kurulursa geriye
+ * "ten" ve "na" kalır: bu birleşme kabul edilmez, yoksa tahta bitirilemez.
+ */
+export function canMerge(free: string[], left: string, right: string, pairs: Set<string>): boolean {
+  const rest = free.map(lowerTr);
+  for (const s of [left, right]) {
+    const i = rest.indexOf(lowerTr(s));
+    if (i < 0) return false;
+    rest.splice(i, 1);
+  }
+  return canFormWords(rest, Math.floor(rest.length / 2), pairs);
 }

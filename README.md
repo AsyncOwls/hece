@@ -20,10 +20,10 @@ yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomat
 
   Altta fazladan hece, hedef kelime, hece rengi (Renkli / Tek renk) ve **Ses** (Açık / Okuma kapalı / Sessiz) ayarları vardır.
   Ses açıkken "Okuyan ses" satırından tarayıcıdaki Türkçe sesler denenip değiştirilebilir.
-- **Çocuk ekranı:** Gökyüzünde boş bulutlar, çimenlerin üstünde heceler. Başka düğme yoktur.
+- **Çocuk ekranı:** Gökyüzünde boş bulutlar, çimenlerin üstünde heceler. Kelime bitince çıkan ✓ dışında düğme yoktur.
   Heceler sürüklenerek (ya da dokunularak) sırayla bulutlara konur. Kelime tamamlanınca
-  heceler tek bulutta birleşir, gökkuşağı çıkar ve kelime okunur; oyun kendiliğinden sonraki
-  kelimeye geçer. Tur bitince "Aferin!" ve yeniden oyna (▶) düğmesi gelir.
+  heceler tek bulutta birleşir, gökkuşağı çıkar ve kelime okunur; gökkuşağından sonra altta yeşil ✓
+  çıkar, çocuk okuyup ✓'e basınca sonraki kelimeye geçilir. Tur bitince "Aferin!" ve yeniden oyna (✓) düğmesi gelir.
 - Kelime başta sesli okunur; boş bir buluta dokunmak kelimeyi yeniden okutur.
   "Hedef kelime: Bulutta soluk" seçilirse heceler bulutların içinde soluk yazılı görünür.
 - Menüye dönmek için sağ üstteki soluk çarka **basılı tutun** (çocuklar yanlışlıkla açmasın diye).
@@ -48,19 +48,21 @@ Menüde başlıksız iki kart vardır; ikisindeki seçimler aynı havuzda karı�
 
 Menünün üstündeki **Heceleri Bul** sekmesinden açılır. Harf tabloları ve "Benim kelimelerim" Hece Birleştir ile
 aynıdır, ama bu bölümde büyük harf hiç görünmez (tablo düğmeleri küçük harfle yazılır) ve özel isim seçeneği
-yoktur: yalnız iki heceli, özel isim olmayan kelimeler kullanılır. **Tahta** ayarı 2×2, 4×4 ya da 6×6'dır;
+yoktur: yalnız iki heceli, özel isim olmayan kelimeler kullanılır. **Tahta** ayarı 2×2 ya da 4×4'tür;
 **Oyunu Başlat** bu ekranda açar, **Adres Ver** paylaşır. Kelime yetmezse tekrar eder.
 
 Tahtada karışık heceler vardır. Çocuk iki bloğun yerini değiştirir (sürükleyerek ya da sırayla iki bloğa dokunarak).
 Aynı satırda yan yana gelen iki hece kelime olunca bloklar birleşir, renklenir ve yerinde sabit kalır. Yalnız tahtaya
-konan kelimeler değil, seçili tablolara kadar okunabilen her iki heceli kelime kabul edilir (ör. "anten" ve "nane"nin
-hecelerinden "anne"). Kelimeler soldan sağa okunduğu için yalnız satır içinde kurulur; bu yüzden tahta hep çifttir ve her satır tam
-kelimelere bölünür. Ortada kurulan bir kelime satırı tıkayacaksa (4'lük satırda 2-3. sütunlar gibi) blok kenara kayar. Tahta dolunca ya da kalan
-hecelerle artık kelime kurulamıyorsa "Aferin!" gelir.
+konan kelimeler değil, seçili tablolara kadar okunabilen her iki heceli kelime kabul edilir; ancak kalan heceleri
+kelimesiz bırakacak bir kelime birleşmez (ör. tahtada "anten" ve "nane" varken "anne" kurulursa geriye "ten", "na"
+kalacağı için "anne" birleşmez). Kelimeler soldan sağa okunduğu için yalnız satır içinde kurulur; bu yüzden tahta hep çifttir ve her satır tam
+kelimelere bölünür. Ortada kurulan bir kelime satırı tıkayacaksa (4'lük satırda 2-3. sütunlar gibi) blok kenara kayar. Oyun tahta tamamen
+dolunca biter.
 
 Oyun gökyüzünde geçer. Heceler beyaz balonlardır; kelime kurulunca iki balon su damlası gibi birbirine akıp
 şeker gibi uzun, parlak tek bir balon olur ve jöle gibi sallanır. Kelime balonları sırayla gökkuşağının
-renklerini alır, oyun bitince büyük gökkuşağı çıkar.
+renklerini alır, oyun bitince tahta görünür kalır (küçülüp yukarı kayar), arkasında büyük gökkuşağı çizilir, ardından altta
+yeniden oyna (✓) düğmesi çıkar. "Aferin!" yazısı çıkmaz.
 
 ### Adres Ver (paylaşılan oyun)
 

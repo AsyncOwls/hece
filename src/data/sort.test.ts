@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Word } from './curriculum';
-import { SORT_SIZES, buildSortBoard, canFormWords, hasReadyWord, pairSet, pickSortWords, rowBlocked, sortSize, sortWordCount } from './sort';
+import { SORT_SIZES, buildSortBoard, canFormWords, canMerge, hasReadyWord, pairSet, pickSortWords, rowBlocked, sortSize, sortWordCount } from './sort';
 
 const w = (a: string, b: string): Word => ({ text: a + b, syllables: [a, b], proper: false });
 const POOL = [w('ka', 'le'), w('la', 'le'), w('el', 'ma'), w('a', 'ta'), w('ke', 'di'), w('ma', 'sa'), w('ka', 'rakter'), w('a', 'na')];
 
 describe('Heceleri Bul', () => {
   it('uses only even boards, filled with whole words', () => {
-    expect(SORT_SIZES.map(sortWordCount)).toEqual([2, 8, 18]);
-    expect([2, 3, 4, 5, 6].map(sortSize)).toEqual([2, 4, 4, 4, 6]);
+    expect(SORT_SIZES.map(sortWordCount)).toEqual([2, 8]);
+    expect([2, 3, 4, 5, 6].map(sortSize)).toEqual([2, 4, 4, 4, 4]);
   });
 
   it('uses only two-syllable words and repeats them when the pool is small', () => {
@@ -49,5 +49,14 @@ describe('Heceleri Bul', () => {
     expect(canFormWords(['an', 'ne', 'na', 'ne', 'bo'], 2, pairs)).toBe(true);
     expect(canFormWords(['an', 'ten', 'na', 'ne'], 2, pairs)).toBe(true);
     expect(canFormWords(['ne', 'ne', 'ne'], 2, pairs)).toBe(false);
+  });
+
+  it('refuses a merge that would leave syllables that can never form words', () => {
+    const pairs = pairSet([w('an', 'ten'), w('na', 'ne'), w('an', 'ne'), w('ne', 'ne')]);
+    const board = ['an', 'ten', 'na', 'ne'];
+    expect(canMerge(board, 'an', 'ne', pairs)).toBe(false);
+    expect(canMerge(board, 'an', 'ten', pairs)).toBe(true);
+    expect(canMerge(board, 'na', 'ne', pairs)).toBe(true);
+    expect(canMerge(['an', 'ne'], 'an', 'ne', pairs)).toBe(true);
   });
 });

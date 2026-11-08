@@ -1,6 +1,7 @@
 import type { SoundMode } from './audio';
 import { parseCustomWords } from './data/custom';
 import { validSentenceSets } from './data/sentences';
+import { sortSize } from './data/sort';
 import { lowerTr } from './data/syllabify';
 
 export interface Settings {
@@ -77,6 +78,8 @@ export function loadSettings(): Settings {
     delete saved.useMine;
     const s: Settings = { ...DEFAULTS, ...saved };
     s.sentSets = validSentenceSets(s.sentSets);
+    // 6×6 artık yok: eski kayıtlar 4×4'e döner.
+    s.sortSize = sortSize(s.sortSize);
     // Eski sürümler: hazır/benim cümleleri kartları ve grup sekmesi.
     delete (s as unknown as Record<string, unknown>).sentBuiltIn;
     delete (s as unknown as Record<string, unknown>).sentGroup;
