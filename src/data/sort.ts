@@ -57,8 +57,9 @@ export function hasReadyWord(cells: string[], n: number, keys: Set<string>): boo
  * kurulu olmasın diye birkaç kez karıştırılır.
  *
  * Tahtaya konan kelimelerle her zaman çözülebilir. Çocuk başka bir okunabilen kelime
- * kurarsa o da birleşir, yeter ki kalan heceler yine tam kelimelere bölünebilsin
- * (bkz. canMerge); böylece oyun hep tahta dolunca biter. Satırı
+ * kurarsa o da birleşir; kalan heceler artık tam kelimelere bölünemiyorsa birkaç
+ * hece değiştirilerek tahta yeniden çözülebilir yapılır (bkz. repairSyllables).
+ * Böylece oyun hep tahta dolunca biter. Satırı
  * tıkayan birleşmelerde bloklar kenara kaydırılır (bkz. rowBlocked).
  */
 export function buildSortBoard(words: Word[], n: number, keys: Set<string> = pairSet(words), rand: Rand = Math.random): string[] {
@@ -127,16 +128,89 @@ export function canFormWords(syllables: string[], need: number, pairs: Set<strin
 }
 
 /**
- * Serbest hecelerden `left` + `right` birleşirse kalanların hepsi yine kelimelere
- * bölünebilir mi. Örn. tahtada "anten" ve "nane" varken "anne" kurulursa geriye
- * "ten" ve "na" kalır: bu birleşme kabul edilmez, yoksa tahta bitirilemez.
+ * Hecelerden en çok kelime kuran eşleşmede artakalan hecelerin indeksleri.
+ * Hece sayısı küçük (en çok 16) olduğu için bit maskesiyle önbellekli arama yeter.
  */
-export function canMerge(free: string[], left: string, right: string, pairs: Set<string>): boolean {
-  const rest = free.map(lowerTr);
-  for (const s of [left, right]) {
-    const i = rest.indexOf(lowerTr(s));
-    if (i < 0) return false;
-    rest.splice(i, 1);
+export function unpaired(syllables: string[], pairs: Set<string>): number[] {
+  const s = syllables.map(lowerTr);
+  const n = s.length;
+  const ok = (a: number, b: number) => pairs.has(pairKey(s[a], s[b])) || pairs.has(pairKey(s[b], s[a]));
+  const firstFree = (mask: number) => {
+    let i = 0;
+    while (i < n && mask & (1 << i)) i++;
+    return i;
+  };
+  const memo = new Map<number, number>();
+  const best = (mask: number): number => {
+    const i = firstFree(mask);
+    if (i >= n) return 0;
+    const known = memo.get(mask);
+    if (known !== undefined) return known;
+    let r = best(mask | (1 << i));
+    for (let j = i + 1; j < n; j++) {
+      if (!(mask & (1 << j)) && ok(i, j)) r = Math.max(r, 1 + best(mask | (1 << i) | (1 << j)));
+    }
+    memo.set(mask, r);
+    return r;
+  };
+
+  const left: number[] = [];
+  let mask = 0;
+  for (let i = firstFree(mask); i < n; i = firstFree(mask)) {
+    const target = best(mask);
+    let partner = -1;
+    for (let j = i + 1; j < n && partner < 0; j++) {
+      if (!(mask & (1 << j)) && ok(i, j) && 1 + best(mask | (1 << i) | (1 << j)) === target) partner = j;
+    }
+    if (partner >= 0) mask |= (1 << i) | (1 << partner);
+    else {
+      left.push(i);
+      mask |= 1 << i;
+    }
   }
-  return canFormWords(rest, Math.floor(rest.length / 2), pairs);
+  return left;
+}
+
+/**
+ * Çocuk tahtadakinden farklı bir kelime kurunca (ör. "nene" ve "tatil" varken
+ * "tane") kalan heceler tam kelimelere bölünemeyebilir ("ne", "til"). O zaman en
+ * az heceyi değiştirerek tahta yeniden çözülebilir yapılır: artakalan heceler
+ * ikişer ele alınır; birine eş olabilecek bir hece varsa yalnız öteki değişir
+ * ("til" → "ne": nene), yoksa ikisi de yeni bir kelimenin hecesi olur. Eşler önce
+ * `preferred` (tahtaya konan kelimeler), yoksa `pairs` içinden seçilir.
+ * Döner: değişecek hecenin indeksi → yeni hece. Tahta zaten çözülebilirse boş.
+ */
+export function repairSyllables(free: string[], pairs: Set<string>, preferred: Set<string>, rand: Rand = Math.random): Map<number, string> {
+  const out = new Map<number, string>();
+  const left = unpaired(free, pairs);
+  const pick = <T>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+  const split = (keys: Set<string>) => [...keys].map((k) => k.split('|') as [string, string]);
+  const sources = [split(preferred), split(pairs)];
+  const partners = (syl: string) => {
+    const s = lowerTr(syl);
+    for (const keys of sources) {
+      const found = keys.flatMap(([a, b]) => (a === s ? [b] : b === s ? [a] : []));
+      if (found.length) return found;
+    }
+    return [];
+  };
+  for (let k = 0; k + 1 < left.length; k += 2) {
+    const [a, b] = [left[k], left[k + 1]];
+    const forA = partners(free[a]);
+    if (forA.length) {
+      out.set(b, pick(forA));
+      continue;
+    }
+    const forB = partners(free[b]);
+    if (forB.length) {
+      out.set(a, pick(forB));
+      continue;
+    }
+    const keys = sources.find((x) => x.length) ?? [];
+    if (!keys.length) continue;
+    const [x, y] = pick(keys);
+    out.set(a, x);
+    out.set(b, y);
+  }
+  return out;
 }

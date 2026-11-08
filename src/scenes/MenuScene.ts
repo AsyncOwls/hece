@@ -247,16 +247,7 @@ export class MenuScene implements Scene {
     ]);
 
     const n = gamePool(s).length;
-    const play = new Button({
-      width: 370,
-      height: 100,
-      color: n > 0 ? C.green : C.line,
-      text: 'Oyunu Başlat',
-      fontSize: 42,
-      icon: playIcon(C.white, 17),
-      onTap: () => this.startSyllables(),
-    });
-    play.position.set(1455, OPTIONS_Y);
+    const play = this.playButton(n > 0, () => this.startSyllables());
     this.drawShare(n > 0, 'Hece Birleştir');
     const info = label(n > 0 ? `Bu seçimle ${n} kelime var` : 'Bu seçimle kelime yok', 26, n > 0 ? C.muted : C.red, {
       fontWeight: '400',
@@ -301,16 +292,7 @@ export class MenuScene implements Scene {
 
     const n = sortWords(s).length;
     const need = sortWordCount(s.sortSize);
-    const play = new Button({
-      width: 370,
-      height: 100,
-      color: n > 0 ? C.green : C.line,
-      text: 'Oyunu Başlat',
-      fontSize: 42,
-      icon: playIcon(C.white, 17),
-      onTap: () => this.startSort(),
-    });
-    play.position.set(1455, OPTIONS_Y);
+    const play = this.playButton(n > 0, () => this.startSort());
     this.drawShare(n > 0, 'Heceleri Bul');
     const text =
       n === 0 ? 'Bu seçimle uygun kelime yok' : n < need ? `${n} uygun kelime var, bazıları tekrar eder` : `Bu seçimle ${n} uygun kelime var`;
@@ -528,6 +510,13 @@ export class MenuScene implements Scene {
     edit.position.set(cx, CARD_Y + CARD_H - 65);
     this.body.addChild(edit);
     return body;
+  }
+
+  /** Oyunu başlatan yazısız, yuvarlak yeşil ▶ düğmesi ("Adres Ver"in solunda). */
+  private playButton(ready: boolean, onTap: () => void): Button {
+    const b = new Button({ width: 110, height: 110, radius: 55, color: ready ? C.green : C.line, icon: playIcon(C.white, 28), onTap });
+    b.position.set(1565, OPTIONS_Y);
+    return b;
   }
 
   /** Başlat'ın yanındaki "Adres Ver": bu ayarlarla açılan play.html adresini gösterir. */

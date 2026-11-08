@@ -48,25 +48,25 @@ Menüde başlıksız iki kart vardır; ikisindeki seçimler aynı havuzda karı�
 
 Menünün üstündeki **Heceleri Bul** sekmesinden açılır. Harf tabloları ve "Benim kelimelerim" Hece Birleştir ile
 aynıdır, ama bu bölümde büyük harf hiç görünmez (tablo düğmeleri küçük harfle yazılır) ve özel isim seçeneği
-yoktur: yalnız iki heceli, özel isim olmayan kelimeler kullanılır. **Tahta** ayarı 2×2 ya da 4×4'tür;
-**Oyunu Başlat** bu ekranda açar, **Adres Ver** paylaşır. Kelime yetmezse tekrar eder.
+yoktur: yalnız iki heceli, özel isim olmayan kelimeler kullanılır. **Tahta** ayarı 2×2 ya da 4×4'tür (sayfa her açıldığında 2×2 başlar);
+yeşil ▶ düğmesi bu ekranda açar, **Adres Ver** paylaşır. Kelime yetmezse tekrar eder.
 
 Tahtada karışık heceler vardır. Çocuk iki bloğun yerini değiştirir (sürükleyerek ya da sırayla iki bloğa dokunarak).
 Aynı satırda yan yana gelen iki hece kelime olunca bloklar birleşir, renklenir ve yerinde sabit kalır. Yalnız tahtaya
-konan kelimeler değil, seçili tablolara kadar okunabilen her iki heceli kelime kabul edilir; ancak kalan heceleri
-kelimesiz bırakacak bir kelime birleşmez (ör. tahtada "anten" ve "nane" varken "anne" kurulursa geriye "ten", "na"
-kalacağı için "anne" birleşmez). Kelimeler soldan sağa okunduğu için yalnız satır içinde kurulur; bu yüzden tahta hep çifttir ve her satır tam
+konan kelimeler değil, seçili tablolara kadar okunabilen her iki heceli kelime kabul edilir. Bu yüzden kalan heceler
+kelimesiz kalabilir (ör. tahtada "nene" ve "tatil" varken "tane" kurulursa geriye "ne", "til" kalır); o zaman en az hece
+dönerek değişir ("til" → "ne") ve tahta yine bitirilebilir. Kelimeler soldan sağa okunduğu için yalnız satır içinde kurulur; bu yüzden tahta hep çifttir ve her satır tam
 kelimelere bölünür. Ortada kurulan bir kelime satırı tıkayacaksa (4'lük satırda 2-3. sütunlar gibi) blok kenara kayar. Oyun tahta tamamen
 dolunca biter.
 
-Oyun gökyüzünde geçer. Heceler beyaz balonlardır; kelime kurulunca iki balon su damlası gibi birbirine akıp
-şeker gibi uzun, parlak tek bir balon olur ve jöle gibi sallanır. Kelime balonları sırayla gökkuşağının
-renklerini alır, oyun bitince tahta görünür kalır (küçülüp yukarı kayar), arkasında büyük gökkuşağı çizilir, ardından altta
-yeniden oyna (✓) düğmesi çıkar. "Aferin!" yazısı çıkmaz.
+Oyun gökyüzünde geçer; tahtanın zemini yoktur. Heceler mavi kenarlı beyaz balonlardır; kelime kurulunca iki balon su damlası gibi birbirine akıp
+şeker gibi uzun, parlak tek bir balon olur ve jöle gibi sallanır. Kelime balonları sırayla gökkuşağının renklerini
+alır. Oyun bitince tahta görünür kalır (küçülüp ortalanır), arkasında büyük gökkuşağı çizilirken kelime balonlarının
+çevresinde beyaz kenar belirir, ardından altta yeniden oyna (✓) düğmesi çıkar. "Aferin!" yazısı çıkmaz.
 
 ### Adres Ver (paylaşılan oyun)
 
-Her bölümdeki "Oyunu Başlat" / "Akvaryum" düğmesinin yanındaki **Adres Ver**, o anki bölümün ayarlarını ve öğretmenin
+Her bölümdeki yeşil ▶ / "Akvaryum" düğmesinin yanındaki **Adres Ver**, o anki bölümün ayarlarını ve öğretmenin
 işaretli kelime/cümlelerini tek bir adrese gömer: `play.html?data=…` (veri, URL'ye uygun base64'te JSON).
 Adresi açan kişi öğretmen menüsünü görmeden, büyük "Hadi Oynayalım!" düğmesine dokunarak doğrudan o oyunu oynar; çark ve
 Esc menüye götürmez. Bu sayfa hiçbir şey kaydetmez (öğretmenin tarayıcısındaki kayıtlar etkilenmez).

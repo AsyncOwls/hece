@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Word } from './curriculum';
-import { SORT_SIZES, buildSortBoard, canFormWords, canMerge, hasReadyWord, pairSet, pickSortWords, rowBlocked, sortSize, sortWordCount } from './sort';
+import { SORT_SIZES, buildSortBoard, canFormWords, hasReadyWord, pairSet, repairSyllables, unpaired, pickSortWords, rowBlocked, sortSize, sortWordCount } from './sort';
 
 const w = (a: string, b: string): Word => ({ text: a + b, syllables: [a, b], proper: false });
 const POOL = [w('ka', 'le'), w('la', 'le'), w('el', 'ma'), w('a', 'ta'), w('ke', 'di'), w('ma', 'sa'), w('ka', 'rakter'), w('a', 'na')];
@@ -51,12 +51,20 @@ describe('Heceleri Bul', () => {
     expect(canFormWords(['ne', 'ne', 'ne'], 2, pairs)).toBe(false);
   });
 
-  it('refuses a merge that would leave syllables that can never form words', () => {
-    const pairs = pairSet([w('an', 'ten'), w('na', 'ne'), w('an', 'ne'), w('ne', 'ne')]);
-    const board = ['an', 'ten', 'na', 'ne'];
-    expect(canMerge(board, 'an', 'ne', pairs)).toBe(false);
-    expect(canMerge(board, 'an', 'ten', pairs)).toBe(true);
-    expect(canMerge(board, 'na', 'ne', pairs)).toBe(true);
-    expect(canMerge(['an', 'ne'], 'an', 'ne', pairs)).toBe(true);
+  it('fixes the leftovers with as few syllable changes as possible after another word is built', () => {
+    const board = pairSet([w('ne', 'ne'), w('ta', 'til')]);
+    const pairs = pairSet([w('ne', 'ne'), w('ta', 'til'), w('ta', 'ne')]);
+    // "nene" ve "tatil" varken "tane" kurulunca geriye "ne", "til" kalır.
+    expect(unpaired(['ne', 'til'], pairs)).toEqual([0, 1]);
+    expect([...repairSyllables(['ne', 'til'], pairs, board)]).toEqual([[1, 'ne']]);
+    // Çözülebilir tahtaya dokunulmaz.
+    expect(unpaired(['ta', 'ne', 'til', 'ne'], pairs)).toEqual([]);
+    expect(repairSyllables(['ta', 'ne', 'til', 'ne'], pairs, board).size).toBe(0);
+    // Yalnız eşleşmeyenler değişir; düzeltilen tahta tam kelimelere bölünür.
+    const free = ['ne', 'ne', 'ta', 'til', 'ne', 'bo'];
+    const fixed = [...free];
+    for (const [i, syl] of repairSyllables(free, pairs, board, () => 0)) fixed[i] = syl;
+    expect(fixed.filter((x, i) => x !== free[i])).toHaveLength(1);
+    expect(canFormWords(fixed, 3, pairs)).toBe(true);
   });
 });

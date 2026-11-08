@@ -1,6 +1,6 @@
 import { Container, Graphics, Text, Ticker } from 'pixi.js';
 import type { Game, Scene } from '../game';
-import { buildSortBoard, canFormWords, canMerge, pairKey, pickSortWords, rowBlocked, sortSize, sortWordCount } from '../data/sort';
+import { buildSortBoard, canFormWords, pairKey, pairSet, pickSortWords, repairSyllables, rowBlocked, sortSize, sortWordCount } from '../data/sort';
 import { Button } from '../ui/Button';
 import { checkIcon } from '../ui/icons';
 import { Dragger } from '../ui/drag';
@@ -14,16 +14,18 @@ import { sortPairs, sortWords } from './common';
 
 /** Birleşen kelimeler sırayla gökkuşağının renklerini alır. */
 const MERGE_COLORS = RAINBOW;
-/** Tahtanın düz arka plan rengi (açık gök mavisi, opak). */
-const BOARD_COLOR = 0xa9dcf8;
-/**
- * Oyun bitince tahtanın sığdırıldığı alan: üstünde gökkuşağı görünür, altında
- * ✓ düğmesine yer kalır.
- */
-const WIN_BOX = { top: 350, bottom: 860, width: 1100 };
+/** Bitişte kelime balonlarının çevresinde beliren beyaz kenarın kalınlığı. */
+const CANDY_EDGE = 7;
+/** Heceler doğrudan gökyüzünde durur; beyaz balonlar kenarlarıyla seçilir. */
+const TILE_EDGE = 0x8fc3ea;
 /** Bitişteki ✓ düğmesi. */
 const TICK_SIZE = 180;
-const TICK_Y = H - 110;
+const TICK_Y = H - 130;
+/**
+ * Oyun bitince kelime grubunun sığdırıldığı alan: ekranın ortasında, gökkuşağı
+ * kemerinin içinde kalacak kadar küçük.
+ */
+const WIN_BOX = { top: H / 2 - 190, bottom: H / 2 + 190, width: 900 };
 /** Sarı zeminde beyaz yazı okunmaz. */
 const textOn = (color: number) => (color === 0xfdd835 ? C.ink : C.white);
 
@@ -54,17 +56,19 @@ function animate(ms: number, frame: (t: number) => void): Promise<void> {
 class Tile extends Container {
   cell = -1;
   private bg = new Graphics();
+  private txt: Text;
 
   constructor(
-    readonly syllable: string,
+    /** Oyun durumundaki hece; değişince görüntü change() ile yetişir. */
+    public syllable: string,
     readonly w: number,
     readonly h: number,
     font: number,
   ) {
     super();
-    const t = label(syllable, font, C.ink);
-    t.y = -4;
-    this.addChild(this.bg, t);
+    this.txt = label(syllable, font, C.ink);
+    this.txt.y = -4;
+    this.addChild(this.bg, this.txt);
     this.draw('idle');
     this.eventMode = 'static';
     this.cursor = 'grab';
@@ -77,8 +81,22 @@ class Tile extends Container {
     this.bg.clear();
     this.bg.roundRect(-w / 2, -h / 2 + 7, w, h, r).fill({ color: 0x3a7cb8, alpha: 0.25 });
     this.bg.roundRect(-w / 2, -h / 2, w, h, r).fill(state === 'idle' ? SKY.cloud : 0xfff6c8);
-    if (state === 'idle') this.bg.stroke({ width: 4, color: SKY.cloudEdge });
+    if (state === 'idle') this.bg.stroke({ width: 6, color: TILE_EDGE });
     else this.bg.stroke({ width: state === 'selected' ? 8 : 6, color: C.yellow });
+  }
+
+  /** Yeni heceyi gösterir: kart gibi dönüp öbür yüzüyle gelir. */
+  async change() {
+    let swapped = false;
+    await animate(460, (t) => {
+      if (this.destroyed) return;
+      this.scale.x = Math.abs(Math.cos(Math.PI * t));
+      if (t >= 0.5 && !swapped) {
+        swapped = true;
+        this.txt.text = this.syllable;
+      }
+    });
+    if (!this.destroyed) this.scale.x = 1;
   }
 }
 
@@ -88,6 +106,8 @@ class Tile extends Container {
  */
 class Candy extends Container {
   private g = new Graphics();
+  /** Balonun çevresindeki beyaz kenar; yalnız bitişte (gökkuşağıyla) belirir. */
+  readonly edge = new Graphics();
   private txt: Text;
 
   constructor(
@@ -102,7 +122,8 @@ class Candy extends Container {
     this.txt = label(text, font * 1.05, textOn(color));
     this.txt.y = -4;
     this.txt.alpha = 0;
-    this.addChild(this.g, this.txt);
+    this.edge.alpha = 0;
+    this.addChild(this.edge, this.g, this.txt);
     this.draw(0);
   }
 
@@ -114,24 +135,31 @@ class Candy extends Container {
     const { cellW, gap, h, color } = this;
     const r = h / 2;
     const w = cellW * 2 + gap;
-    const g = this.g;
+    let g = this.g;
     g.clear();
+    this.edge.clear();
 
-    const shape = (dy: number, fill: number) => {
-      g.roundRect(-w / 2, -r + dy, cellW, h, r).fill(fill);
-      g.roundRect(w / 2 - cellW, -r + dy, cellW, h, r).fill(fill);
+    // pad > 0: şekil her yandan o kadar büyük çizilir (beyaz kenar için).
+    const shape = (dy: number, fill: number, pad = 0) => {
+      g.roundRect(-w / 2 - pad, -r + dy - pad, cellW + 2 * pad, h + 2 * pad, r + pad).fill(fill);
+      g.roundRect(w / 2 - cellW - pad, -r + dy - pad, cellW + 2 * pad, h + 2 * pad, r + pad).fill(fill);
       if (goo <= 0) return;
       // İki damlanın iç uçları arasında içe kıvrık boyun; ortası goo ile kalınlaşır.
       const x1 = -w / 2 + cellW - r;
       const x2 = w / 2 - cellW + r;
       const m = r * goo;
-      g.moveTo(x1, -r + dy)
-        .quadraticCurveTo(0, r - 2 * m + dy, x2, -r + dy)
-        .lineTo(x2, r + dy)
-        .quadraticCurveTo(0, 2 * m - r + dy, x1, r + dy)
+      g.moveTo(x1, -r + dy - pad)
+        .quadraticCurveTo(0, r - 2 * m + dy - pad, x2, -r + dy - pad)
+        .lineTo(x2, r + dy + pad)
+        .quadraticCurveTo(0, 2 * m - r + dy + pad, x1, r + dy + pad)
         .closePath()
         .fill(fill);
     };
+    // Beyaz kenar balonu gölgesiyle birlikte sarar; ayrı katmanda, görünürlüğü edge.alpha.
+    g = this.edge;
+    shape(0, 0xffffff, CANDY_EDGE);
+    shape(8, 0xffffff, CANDY_EDGE);
+    g = this.g;
     shape(8, darken(color, 0.65));
     shape(0, color);
 
@@ -167,6 +195,8 @@ export class SortScene implements Scene {
   private tiles: (Tile | null)[] = [];
   /** Birleşmesi kabul edilen hece çiftleri (okunabilen tüm iki heceli kelimeler). */
   private pairs = new Set<string>();
+  /** Tahtaya konan kelimelerin çiftleri: hece değiştirirken önce bunlar kullanılır. */
+  private boardPairs = new Set<string>();
   private colors = MERGE_COLORS;
   /** Bitişte tahtanın arkasında, onu çevreleyen büyük gökkuşağı. */
   private rainbow = new Rainbow(W / 2, 900, 860, 44);
@@ -212,6 +242,7 @@ export class SortScene implements Scene {
       return;
     }
     this.pairs = sortPairs(s);
+    this.boardPairs = pairSet(words);
     this.build(buildSortBoard(words, this.n, this.pairs));
   }
 
@@ -228,11 +259,7 @@ export class SortScene implements Scene {
     const bh = n * this.cellH + (n - 1) * this.gap;
     const pad = 30;
     this.boardSize = { w: bw + pad * 2, h: bh + pad * 2 };
-    // Oyun alanının arkası düz, opak tek renk: gökyüzü ve tepeler arkada kalır, heceler net görünür.
-    const board = new Graphics()
-      .roundRect(W / 2 - bw / 2 - pad, H / 2 - bh / 2 - pad, bw + pad * 2, bh + pad * 2, 40)
-      .fill(BOARD_COLOR);
-    this.boardLayer.addChild(board);
+    // Tahtanın zemini yok: heceler ve kelime balonları kenarlarıyla gökyüzünde durur.
 
     this.tiles = cells.map((syl, i) => {
       const t = new Tile(syl, this.cellW, this.cellH, this.font);
@@ -340,8 +367,6 @@ export class SortScene implements Scene {
         const right = this.tiles[r];
         if (!left || !right) continue;
         if (!this.pairs.has(pairKey(left.syllable, right.syllable))) continue;
-        // Kalan heceleri kelimesiz bırakacak birleşme olmaz: oyun hep tahta dolunca biter.
-        if (!canMerge(this.freeSyllables(), left.syllable, right.syllable, this.pairs)) continue;
         this.merge(left, right);
         break;
       }
@@ -361,13 +386,23 @@ export class SortScene implements Scene {
     this.blocks.push(block);
     const from = this.blockPos(l);
     const moved = this.unblockRow(Math.floor(l / this.n));
+    const repaired = this.repair();
     // Tahtada yer kalmadıysa ya da kalan hecelerle artık kelime kurulamıyorsa oyun biter.
     const over = this.blocks.length >= sortWordCount(this.n) || !canFormWords(this.freeSyllables(), 1, this.pairs);
     if (over) this.won = true;
-    void this.showMerge(left, right, block, from, text, moved, over);
+    void this.showMerge(left, right, block, from, text, moved, repaired, over);
   }
 
-  private async showMerge(left: Tile, right: Tile, block: Block, from: { x: number; y: number }, text: string, moved: Tile[], over: boolean) {
+  private async showMerge(
+    left: Tile,
+    right: Tile,
+    block: Block,
+    from: { x: number; y: number },
+    text: string,
+    moved: Tile[],
+    repaired: Tile[],
+    over: boolean,
+  ) {
     sfx.correct();
     const v = block.view;
     v.position.set(from.x, from.y);
@@ -419,10 +454,42 @@ export class SortScene implements Scene {
       this.checkWords(moved.filter((t) => !t.destroyed && this.tiles[t.cell] === t).map((t) => t.cell));
     }
 
+    if (repaired.length) {
+      // Değişen heceler dönerek yenilenir; yeni hal hemen bir kelime kurduysa o da birleşir.
+      if (!moved.length) await wait(550);
+      if (!this.alive) return;
+      sfx.bubble();
+      await Promise.all(repaired.map((t) => t.change()));
+      if (!this.alive) return;
+      const live = repaired.filter((t) => !t.destroyed && this.tiles[t.cell] === t);
+      live.forEach((t) => {
+        t.eventMode = 'static';
+        t.draw(t === this.selected ? 'selected' : 'idle');
+      });
+      this.checkWords(live.map((t) => t.cell));
+    }
+
     if (over) {
       await wait(1200);
       if (this.alive) void this.win();
     }
+  }
+
+  /**
+   * Çocuk tahtadakinden farklı bir kelime kurup kalan heceleri kelimesiz bıraktıysa
+   * en az heceyi değiştirir (bkz. repairSyllables). Durum hemen değişir; değişen
+   * heceler görüntü yenilenene kadar dokunulamaz.
+   */
+  private repair(): Tile[] {
+    const free = this.tiles.filter((t): t is Tile => t !== null);
+    const changes = repairSyllables(free.map((t) => t.syllable), this.pairs, this.boardPairs);
+    return [...changes].map(([i, syllable]) => {
+      const t = free[i];
+      t.syllable = syllable;
+      t.eventMode = 'none';
+      if (this.selected === t) this.select(null);
+      return t;
+    });
   }
 
   /** Henüz kelimeye katılmamış heceler. */
@@ -470,22 +537,24 @@ export class SortScene implements Scene {
   }
 
   /**
-   * Oyun bitti: tahta görünür kalır, küçülüp yukarı kayar; önce arkasında
-   * gökkuşağı çizilir, sonra altta yeşil ✓ (yeniden oyna) çıkar.
+   * Oyun bitti: tahta görünür kalır, küçülüp yukarı kayar; arkasında gökkuşağı
+   * çizilir, sonra altta yeşil ✓ (yeniden oyna) çıkar.
    */
   private async win() {
     this.won = true;
     this.select(null);
+    // Tahta, gökkuşağı arkada görünsün ve altında ✓'e yer kalsın diye küçülüp ortalanır.
     const { w, h } = this.boardSize;
     const s = Math.min(1, (WIN_BOX.bottom - WIN_BOX.top) / h, WIN_BOX.width / w);
-    const cy = (WIN_BOX.top + WIN_BOX.bottom) / 2;
-    const to = { x: W / 2 - (s * W) / 2, y: cy - (s * H) / 2, scale: s };
+    const to = { x: W / 2 - (s * W) / 2, y: (WIN_BOX.top + WIN_BOX.bottom) / 2 - (s * H) / 2, scale: s };
     await Promise.all([this.boardLayer, this.blockLayer, this.tileLayer].map((l) => tween(l, to, 500, easeInOut)));
     if (!this.alive) return;
 
     sfx.win();
     confetti(this.view, W / 2 - 600, 300, 60);
     confetti(this.view, W / 2 + 600, 300, 60);
+    // Gökkuşağı çizilirken kelime balonlarının çevresinde beyaz kenar belirir.
+    for (const b of this.blocks) void tween(b.view.edge, { alpha: 1 }, 900);
     await this.rainbow.show(1100);
     if (!this.alive) return;
 
