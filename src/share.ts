@@ -32,7 +32,7 @@ interface Shared {
   showWord?: boolean;
   oneColor?: boolean;
   roundSize?: number;
-  // Hece Sort (kelimeler Hece Birleştir ayarlarından)
+  // Heceleri Bul (kelimeler Hece Birleştir ayarlarından)
   sortSize?: number;
   // Cümle Okuyorum
   /** Eski adresler: hazır cümleler (o zaman yalnız ANETİL) açık mı. */

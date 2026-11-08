@@ -63,13 +63,13 @@ export function capitalizeTr(s: string) {
   return s.charAt(0).toLocaleUpperCase('tr-TR') + s.slice(1);
 }
 
-/** Hece Sort tahtasına konabilecek kelimeler: oyun havuzunun iki heceli, özel isim olmayanları. */
+/** Heceleri Bul tahtasına konabilecek kelimeler: oyun havuzunun iki heceli, özel isim olmayanları. */
 export function sortWords(s: Settings): Word[] {
   return twoSyllable(gamePool(s));
 }
 
 /**
- * Hece Sort'ta birleşmesi kabul edilen kelimeler: tahtadakilerin yanında seçili en
+ * Heceleri Bul'da birleşmesi kabul edilen kelimeler: tahtadakilerin yanında seçili en
  * ileri tabloya kadar okunabilen tüm iki heceli kelimeler ve öğretmenin kelimeleri.
  */
 export function sortPairs(s: Settings): Set<string> {

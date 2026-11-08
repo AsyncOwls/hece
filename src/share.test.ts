@@ -47,7 +47,7 @@ describe('shared game address', () => {
     expect(sentencePool(decodeShared(oldMine)!.settings)).toEqual(['Kedi süt içti.']);
   });
 
-  it('carries Hece Sort with its board size and the syllable game words', () => {
+  it('carries Heceleri Bul with its board size and the syllable game words', () => {
     const { mode, settings: s } = decodeShared(encodeShared({ ...teacher, tab: 'sentence', sortSize: 6 }, 'sort'))!;
     expect(mode).toBe('sort');
     expect(s.tab).toBe('sort');

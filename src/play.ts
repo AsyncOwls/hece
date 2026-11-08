@@ -21,7 +21,7 @@ async function start() {
   if (!shared) {
     game.go((g) => new StartScene(g, 'Bu oyun adresi eksik ya da bozuk.\nÖğretmeninizden yeni bir adres isteyin.'));
   } else if (shared.mode === 'sort') {
-    game.go((g) => new StartScene(g, 'Hece Sort', (g2) => new SortScene(g2)));
+    game.go((g) => new StartScene(g, 'Heceleri Bul', (g2) => new SortScene(g2)));
   } else if (shared.mode === 'sentence') {
     game.go((g) => new StartScene(g, 'Cümle Okuyorum', (g2) => new SentenceScene(g2)));
   } else {

@@ -162,7 +162,7 @@ export class MenuScene implements Scene {
   private drawTabs() {
     const tabs: { tab: Settings['tab']; text: string; color: number }[] = [
       { tab: 'syllable', text: 'Hece Birleştir', color: C.red },
-      { tab: 'sort', text: 'Hece Sort', color: C.orange },
+      { tab: 'sort', text: 'Heceleri Bul', color: C.orange },
       { tab: 'sentence', text: 'Cümle Okuyorum', color: C.purple },
     ];
     this.segmented(
@@ -265,10 +265,10 @@ export class MenuScene implements Scene {
     this.body.addChild(play, info);
   }
 
-  // --- Hece Sort ---
+  // --- Heceleri Bul ---
 
   /**
-   * Hece Sort'un kendi bölümü: aynı kelime kaynakları, ama yalnız iki heceli ve
+   * Heceleri Bul'un kendi bölümü: aynı kelime kaynakları, ama yalnız iki heceli ve
    * özel isim olmayan kelimeler; büyük harf hiç görünmez.
    */
   private drawSortTab() {
@@ -311,7 +311,7 @@ export class MenuScene implements Scene {
       onTap: () => this.startSort(),
     });
     play.position.set(1455, OPTIONS_Y);
-    this.drawShare(n > 0, 'Hece Sort');
+    this.drawShare(n > 0, 'Heceleri Bul');
     const text =
       n === 0 ? 'Bu seçimle uygun kelime yok' : n < need ? `${n} uygun kelime var, bazıları tekrar eder` : `Bu seçimle ${n} uygun kelime var`;
     const info = label(text, 26, n === 0 ? C.red : n < need ? C.orange : C.muted, { fontWeight: '400' });
@@ -411,7 +411,7 @@ export class MenuScene implements Scene {
     return content;
   }
 
-  /** Harf tabloları. Hece Sort'ta harfler küçük yazılır ve özel isim satırı yoktur. */
+  /** Harf tabloları. Heceleri Bul'da harfler küçük yazılır ve özel isim satırı yoktur. */
   private drawTableCard(sort = false) {
     const s = this.s;
     const body = this.card(60, 1180);

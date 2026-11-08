@@ -2,7 +2,7 @@ import type { Word } from './curriculum';
 import { lowerTr } from './syllabify';
 
 /**
- * Hece Sort tahta boyutları (n×n). Hep çift: kelimeler satır içinde yan yana
+ * Heceleri Bul tahta boyutları (n×n). Hep çift: kelimeler satır içinde yan yana
  * kurulur (soldan sağa okunur), her satır tam kelimelere bölünür, hece artmaz.
  */
 export const SORT_SIZES = [2, 4, 6];
@@ -13,7 +13,7 @@ export const sortSize = (n: number) => (SORT_SIZES.includes(n) ? n : 4);
 /** n×n tahtadaki kelime sayısı. */
 export const sortWordCount = (n: number) => (n * n) / 2;
 
-/** Hece Sort'a uygun kelimeler: iki heceli, özel isim olmayan. */
+/** Heceleri Bul'a uygun kelimeler: iki heceli, özel isim olmayan. */
 export const twoSyllable = (pool: Word[]) => pool.filter((w) => w.syllables.length === 2 && !w.proper);
 
 /** Yan yana iki hece (büyük/küçük harf farkı gözetmez). */

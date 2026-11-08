@@ -30,7 +30,7 @@ export interface Settings {
   sentOff: string[];
   /** Cümle Okuyorum'da akvaryumdaki balık sayısı. */
   creatures: number;
-  /** Hece Sort tahtasının boyutu (n×n; 2, 4 ya da 6). */
+  /** Heceleri Bul tahtasının boyutu (n×n; 2, 4 ya da 6). */
   sortSize: number;
   sound: SoundMode;
   /** Seçilen okuma sesinin adı; boşsa en iyi Türkçe ses. */

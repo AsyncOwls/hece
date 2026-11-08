@@ -5,7 +5,7 @@ import { SORT_SIZES, buildSortBoard, canFormWords, hasReadyWord, pairSet, pickSo
 const w = (a: string, b: string): Word => ({ text: a + b, syllables: [a, b], proper: false });
 const POOL = [w('ka', 'le'), w('la', 'le'), w('el', 'ma'), w('a', 'ta'), w('ke', 'di'), w('ma', 'sa'), w('ka', 'rakter'), w('a', 'na')];
 
-describe('Hece Sort', () => {
+describe('Heceleri Bul', () => {
   it('uses only even boards, filled with whole words', () => {
     expect(SORT_SIZES.map(sortWordCount)).toEqual([2, 8, 18]);
     expect([2, 3, 4, 5, 6].map(sortSize)).toEqual([2, 4, 4, 4, 6]);

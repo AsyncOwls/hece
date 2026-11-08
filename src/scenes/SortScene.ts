@@ -141,7 +141,7 @@ class Candy extends Container {
 }
 
 /**
- * Hece Sort: n×n tahtada karışık heceler. Çocuk iki bloğun yerini değiştirir
+ * Heceleri Bul: n×n tahtada karışık heceler. Çocuk iki bloğun yerini değiştirir
  * (sürükleyerek ya da sırayla iki bloğa dokunarak). Aynı satırda yan yana gelen
  * iki hece bir kelime olunca bloklar birleşir, renklenir ve yerinde sabit kalır.
  * Gökyüzünde geçer: birleşen kelimeler sırayla gökkuşağının renklerini alır,

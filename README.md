@@ -44,9 +44,9 @@ Menüde başlıksız iki kart vardır; ikisindeki seçimler aynı havuzda karı�
   kalır, listeden oyunda çıkacak olanlar işaretlenir. Seçili cümlelerin hepsi kartta kaydırılabilir listede görünür.
 - Akvaryumdaki balık sayısı 4, 6 ya da 8 seçilebilir.
 
-### Hece Sort (deneme)
+### Heceleri Bul (deneme)
 
-Menünün üstündeki **Hece Sort** sekmesinden açılır. Harf tabloları ve "Benim kelimelerim" Hece Birleştir ile
+Menünün üstündeki **Heceleri Bul** sekmesinden açılır. Harf tabloları ve "Benim kelimelerim" Hece Birleştir ile
 aynıdır, ama bu bölümde büyük harf hiç görünmez (tablo düğmeleri küçük harfle yazılır) ve özel isim seçeneği
 yoktur: yalnız iki heceli, özel isim olmayan kelimeler kullanılır. **Tahta** ayarı 2×2, 4×4 ya da 6×6'dır;
 **Oyunu Başlat** bu ekranda açar, **Adres Ver** paylaşır. Kelime yetmezse tekrar eder.
@@ -66,7 +66,7 @@ renklerini alır, oyun bitince büyük gökkuşağı çıkar.
 
 Her bölümdeki "Oyunu Başlat" / "Akvaryum" düğmesinin yanındaki **Adres Ver**, o anki bölümün ayarlarını ve öğretmenin
 işaretli kelime/cümlelerini tek bir adrese gömer: `play.html?data=…` (veri, URL'ye uygun base64'te JSON).
-Adresi açan kişi öğretmen menüsünü görmeden, büyük ▶ düğmesine dokunarak doğrudan o oyunu oynar; çark ve
+Adresi açan kişi öğretmen menüsünü görmeden, büyük "Hadi Oynayalım!" düğmesine dokunarak doğrudan o oyunu oynar; çark ve
 Esc menüye götürmez. Bu sayfa hiçbir şey kaydetmez (öğretmenin tarayıcısındaki kayıtlar etkilenmez).
 Okuma sesi cihaza özel olduğu için adrese girmez; açılan cihazdaki en iyi Türkçe ses kullanılır.
 

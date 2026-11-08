@@ -6,7 +6,7 @@ import { C, W, label } from '../theme';
 import { easeOutBack, tween } from '../tween';
 
 /**
- * Paylaşılan oyunun (play.html) açılış ekranı: başlık ve büyük ▶. Tarayıcılar
+ * Paylaşılan oyunun (play.html) açılış ekranı: başlık ve büyük "Hadi Oynayalım!" düğmesi. Tarayıcılar
  * dokunuş olmadan ses çaldırmadığı için oyun bu dokunuşla başlar. `start`
  * verilmezse yalnızca mesaj gösterir (bozuk adres).
  */
@@ -23,18 +23,21 @@ export class StartScene implements Scene {
     this.view.addChild(t);
     if (!start) return;
 
-    const play = new Button({ width: 260, height: 260, radius: 130, color: C.green, icon: playIcon(C.white, 70), onTap: () => this.go() });
+    // Tek büyük düğme: "Hadi Oynayalım!" (dokunmak oyunu ve sesi başlatır).
+    const play = new Button({
+      width: 800,
+      height: 170,
+      radius: 85,
+      color: C.green,
+      text: 'Hadi Oynayalım!',
+      fontSize: 70,
+      icon: playIcon(C.white, 26),
+      onTap: () => this.go(),
+    });
     play.position.set(W / 2, 640);
     play.scale.set(0.3);
-    const cta = label('Hadi oynayalım!', 64, C.green);
-    cta.position.set(W / 2, 850);
-    cta.alpha = 0;
-    cta.eventMode = 'static';
-    cta.cursor = 'pointer';
-    cta.on('pointertap', () => this.go());
-    this.view.addChild(play, cta);
+    this.view.addChild(play);
     void tween(play, { scale: 1 }, 500, easeOutBack);
-    void tween(cta, { alpha: 1 }, 600);
   }
 
   private go() {
