@@ -1,15 +1,13 @@
 import type { SoundMode } from './audio';
+import { parseCustomWords } from './data/custom';
 import { validSentenceSets } from './data/sentences';
+import { lowerTr } from './data/syllabify';
 
 export interface Settings {
   /** Menüde açık bölüm. */
   tab: 'syllable' | 'sentence' | 'sort';
-  /** Seçili tablolar (ALL_TABLES sırası); farklı ses gruplarından karışık olabilir. */
+  /** Seçili tablolar (ALL_TABLES sırası); farklı ses gruplarından karışık olabilir, boş da olabilir. */
   tables: number[];
-  /** Harf tablosunun kelimeleri kullanılsın. */
-  useTable: boolean;
-  /** Öğretmenin kendi kelimeleri kullanılsın. */
-  useMine: boolean;
   /** Öğretmenin kayıtlı kelimeleri (bkz. parseCustomWords). */
   customWords: string;
   /** Kayıtlı ama seçili olmayan kelimeler (küçük harfli). */
@@ -24,12 +22,8 @@ export interface Settings {
   oneColor: boolean;
   /** Bir turdaki kelime sayısı. */
   roundSize: number;
-  /** Cümle Okuyorum: seçili harflerle okunabilen hazır cümleler kullanılsın. */
-  sentBuiltIn: boolean;
-  /** Cümle Okuyorum: seçili hazır fişler (SENTENCE_SETS adları, ör. 'ANETİL', 'O'). */
+  /** Cümle Okuyorum: seçili hazır cümle grupları (SENTENCE_SETS adları: 'ANETİL', 'OKURIM'); boş olabilir. */
   sentSets: string[];
-  /** Cümle Okuyorum: öğretmenin kendi cümleleri kullanılsın. */
-  sentMine: boolean;
   /** Öğretmenin kayıtlı cümleleri, her satırda bir tane. */
   customSentences: string;
   /** Kayıtlı ama seçili olmayan cümleler (küçük harfli). */
@@ -48,8 +42,6 @@ const KEY = 'hece.settings.v1';
 export const DEFAULTS: Settings = {
   tab: 'syllable',
   tables: [0],
-  useTable: true,
-  useMine: false,
   customWords: '',
   wordsOff: [],
   proper: true,
@@ -57,9 +49,7 @@ export const DEFAULTS: Settings = {
   showWord: false,
   oneColor: false,
   roundSize: 10,
-  sentBuiltIn: true,
-  sentSets: ['ANETİL'],
-  sentMine: false,
+  sentSets: validSentenceSets(undefined),
   customSentences: '',
   sentOff: [],
   creatures: 6,
@@ -78,8 +68,19 @@ export function loadSettings(): Settings {
     }
     delete saved.table;
     delete saved.cumulative;
+    // Eski sürümlerde kartların onay kutuları vardı: kapalı kaynak artık seçimsiz olarak taşınır.
+    if (saved.useTable === false) saved.tables = [];
+    if (saved.useMine === false && typeof saved.customWords === 'string') {
+      saved.wordsOff = parseCustomWords(saved.customWords).words.map((w) => lowerTr(w.text));
+    }
+    delete saved.useTable;
+    delete saved.useMine;
     const s: Settings = { ...DEFAULTS, ...saved };
     s.sentSets = validSentenceSets(s.sentSets);
+    // Eski sürümler: hazır/benim cümleleri kartları ve grup sekmesi.
+    delete (s as unknown as Record<string, unknown>).sentBuiltIn;
+    delete (s as unknown as Record<string, unknown>).sentGroup;
+    delete (s as unknown as Record<string, unknown>).sentMine;
     return s;
   } catch {
     return { ...DEFAULTS };

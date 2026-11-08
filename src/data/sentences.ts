@@ -53,7 +53,8 @@ const SETS: { name: string; group: number; text: string }[] = [
     `,
   },
   {
-    name: 'O',
+    // 2. ses grubu fişleri (O, K, U, R, I, M harfleri, 8'er cümle).
+    name: 'OKURIM',
     group: 1,
     text: `
       Ali ot al.
@@ -64,12 +65,6 @@ const SETS: { name: string; group: number; text: string }[] = [
       Nine ona et al.
       On tane atlet al.
       Lale o ata ot al.
-    `,
-  },
-  {
-    name: 'K',
-    group: 1,
-    text: `
       Onat kekik, nane kokla.
       Ela iki tane toka al.
       İnek ile ata ot al.
@@ -78,12 +73,6 @@ const SETS: { name: string; group: number; text: string }[] = [
       Kenan, Ali ile kekik al.
       Kenan kekik ile nane ek.
       Ali iki tane kekik al.
-    `,
-  },
-  {
-    name: 'U',
-    group: 1,
-    text: `
       Kenan okulu anlat.
       Tuana o ne?
       Utku, kokulu nane kokla.
@@ -92,12 +81,6 @@ const SETS: { name: string; group: number; text: string }[] = [
       Onat, koluna kolluk tak.
       Lale, o okul onun okulu.
       Utku onu oku, anla.
-    `,
-  },
-  {
-    name: 'R',
-    group: 1,
-    text: `
       Ela onu okur.
       İki tane nar tart.
       Erkan kuru nane al.
@@ -106,12 +89,6 @@ const SETS: { name: string; group: number; text: string }[] = [
       İki nane ne tutar?
       Lila terlik on lira.
       Okan erken kalk.
-    `,
-  },
-  {
-    name: 'I',
-    group: 1,
-    text: `
       Tarık kalın atkı takar.
       Anıl altını ona taktı.
       Itır’a altı tane altın al.
@@ -120,12 +97,6 @@ const SETS: { name: string; group: number; text: string }[] = [
       Nalan okul kuralını anlat.
       İlke renkli takı alır.
       Anıl renkli atık kutuları al.
-    `,
-  },
-  {
-    name: 'M',
-    group: 1,
-    text: `
       Ekrem minik minik erik al.
       Martılara ekmek atalım mı?
       Murat makinenin tekerini al.
@@ -146,19 +117,19 @@ const lines = (text: string) =>
 
 export const SENTENCE_SETS = SETS.map((s) => ({ name: s.name, group: s.group, sentences: lines(s.text) }));
 export const SENTENCES: string[] = SENTENCE_SETS.flatMap((s) => s.sentences);
-export const DEFAULT_SENTENCE_SETS = [SENTENCE_SETS[0].name];
+const SET_NAMES = SENTENCE_SETS.map((s) => s.name);
 
-/** Bilinen fiş adlarını fiş sırasıyla döner; hiçbiri kalmazsa varsayılan fiş. */
+/** Bilinen fiş adları, fiş sırasıyla (hiçbiri seçili olmayabilir); liste değilse hepsi. */
 export function validSentenceSets(names: unknown): string[] {
-  const list = Array.isArray(names) ? names : [];
-  const valid = SENTENCE_SETS.map((s) => s.name).filter((n) => list.includes(n));
-  return valid.length ? valid : [...DEFAULT_SENTENCE_SETS];
+  if (!Array.isArray(names)) return [...SET_NAMES];
+  // Kısa süre harf harf ayrı fişlerdi (O, K, U, R, I, M); hepsi artık OKURIM.
+  const list = names.map((n) => ('OKURIM'.includes(n) && n.length === 1 ? 'OKURIM' : n));
+  return SET_NAMES.filter((n) => list.includes(n));
 }
 
 /** Seçili fişlerin cümleleri (fiş sırasıyla). */
-export function sentencesOf(names: string[]): string[] {
-  return SENTENCE_SETS.filter((s) => names.includes(s.name)).flatMap((s) => s.sentences);
-}
+export const sentencesOf = (names: string[]): string[] =>
+  SENTENCE_SETS.filter((s) => names.includes(s.name)).flatMap((s) => s.sentences);
 
 /** Ekranda iki satıra sığacak en uzun cümle. */
 export const MAX_SENTENCE = 70;

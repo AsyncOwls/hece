@@ -7,13 +7,15 @@ import { Dragger } from '../ui/drag';
 import { confetti } from '../ui/confetti';
 import { TeacherGear } from '../ui/TeacherGear';
 import { RAINBOW, Rainbow, SKY, SkyBackdrop, cloudTextY, drawCloud, hills } from '../ui/sky';
-import { C, H, W, darken, label, mix } from '../theme';
+import { C, H, W, darken, label } from '../theme';
 import { easeInOut, easeOutBack, tween, wait } from '../tween';
 import { sfx, speak } from '../audio';
 import { sortPairs, sortWords } from './common';
 
 /** Birleşen kelimeler sırayla gökkuşağının renklerini alır. */
 const MERGE_COLORS = RAINBOW;
+/** Tahtanın düz arka plan rengi (açık gök mavisi, opak). */
+const BOARD_COLOR = 0xa9dcf8;
 /** Sarı zeminde beyaz yazı okunmaz. */
 const textOn = (color: number) => (color === 0xfdd835 ? C.ink : C.white);
 
@@ -213,16 +215,10 @@ export class SortScene implements Scene {
     const bw = n * this.cellW + (n - 1) * this.gap;
     const bh = n * this.cellH + (n - 1) * this.gap;
     const pad = 30;
+    // Oyun alanının arkası düz, opak tek renk: gökyüzü ve tepeler arkada kalır, heceler net görünür.
     const board = new Graphics()
-      .roundRect(W / 2 - bw / 2 - pad, H / 2 - bh / 2 - pad, bw + pad * 2, bh + pad * 2 + 8, 40)
-      .fill({ color: C.white, alpha: 0.35 })
-      .stroke({ width: 4, color: C.white, alpha: 0.7 });
-    for (let i = 0; i < n * n; i++) {
-      const p = this.pos(i);
-      board
-        .roundRect(p.x - this.cellW / 2, p.y - this.cellH / 2, this.cellW, this.cellH, Math.min(28, this.cellH * 0.18))
-        .fill({ color: mix(SKY.top, C.white, 0.5), alpha: 0.6 });
-    }
+      .roundRect(W / 2 - bw / 2 - pad, H / 2 - bh / 2 - pad, bw + pad * 2, bh + pad * 2, 40)
+      .fill(BOARD_COLOR);
     this.boardLayer.addChild(board);
 
     this.tiles = cells.map((syl, i) => {

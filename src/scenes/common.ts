@@ -29,14 +29,12 @@ export function mySentences(s: Settings): string[] {
   return parseCustomSentences(s.customSentences).sentences.filter((x) => !s.sentOff.includes(lowerTr(x)));
 }
 
-const mine = (s: Settings) => (s.useMine ? myWords(s) : []);
-
-/** Ayarlara göre oyunda sorulacak kelimeler: tablo kelimeleri ve/veya öğretmenin kelimeleri. */
+/** Oyunda sorulacak kelimeler: seçili tabloların kelimeleri ve öğretmenin işaretli kelimeleri. */
 export function gamePool(s: Settings): Word[] {
   const seen = new Set<string>();
   const out: Word[] = [];
-  const table = s.useTable ? selectedTables(s).flatMap((t) => wordPool(t, { cumulative: false, proper: s.proper })) : [];
-  for (const w of [...table, ...mine(s)]) {
+  const table = selectedTables(s).flatMap((t) => wordPool(t, { cumulative: false, proper: s.proper }));
+  for (const w of [...table, ...myWords(s)]) {
     const key = lowerTr(w.text);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -47,19 +45,18 @@ export function gamePool(s: Settings): Word[] {
 
 /**
  * Çeldirici heceler: seçili en ileri tabloya kadar okunabilen heceler (o harfe
- * gelen çocuk öncekileri de bilir); yalnız öğretmenin kelimeleri seçiliyse onların heceleri.
+ * gelen çocuk öncekileri de bilir) ve öğretmenin işaretli kelimelerinin heceleri.
  */
 export function gameBank(s: Settings): string[] {
   const last = selectedTables(s).at(-1);
-  const set = new Set(s.useTable && last ? syllableBank(last) : []);
-  for (const w of mine(s)) w.syllables.forEach((x) => set.add(lowerTr(x)));
+  const set = new Set(last ? syllableBank(last) : []);
+  for (const w of myWords(s)) w.syllables.forEach((x) => set.add(lowerTr(x)));
   return [...set];
 }
 
-/** Cümle Okuyorum havuzu: hazır cümleler ve/veya öğretmenin cümleleri (sırası sahnede karıştırılır). */
+/** Cümle Okuyorum havuzu: seçili hazır cümle grupları ve öğretmenin işaretli cümleleri (sırası sahnede karıştırılır). */
 export function sentencePool(s: Settings): string[] {
-  const builtIn = s.sentBuiltIn ? sentencesOf(s.sentSets) : [];
-  return [...new Set([...builtIn, ...(s.sentMine ? mySentences(s) : [])])];
+  return [...new Set([...sentencesOf(s.sentSets), ...mySentences(s)])];
 }
 
 export function capitalizeTr(s: string) {
@@ -77,6 +74,6 @@ export function sortWords(s: Settings): Word[] {
  */
 export function sortPairs(s: Settings): Set<string> {
   const last = selectedTables(s).at(-1);
-  const readable = s.useTable && last ? [...dictionaryUpTo(last, false).values()] : [];
-  return pairSet([...sortWords(s), ...readable, ...mine(s)]);
+  const readable = last ? [...dictionaryUpTo(last, false).values()] : [];
+  return pairSet([...sortWords(s), ...readable, ...myWords(s)]);
 }

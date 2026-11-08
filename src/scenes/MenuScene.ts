@@ -7,9 +7,10 @@ import { SENTENCE_SETS, parseCustomSentences, sentencesOf } from '../data/senten
 import { Button } from '../ui/Button';
 import { fishIcon, fullscreenIcon, playIcon } from '../ui/icons';
 import { openListEditor } from '../ui/ListEditor';
+import { ScrollList } from '../ui/ScrollList';
 import { openShareDialog } from '../ui/ShareDialog';
 import { shareUrl } from '../share';
-import { C, GROUP_COLORS, W, label, mix } from '../theme';
+import { C, GROUP_COLORS, W, label } from '../theme';
 import { lowerTr } from '../data/syllabify';
 import { currentVoice, onVoicesChanged, sfx, speak, turkishVoices, type SoundMode } from '../audio';
 import type { Settings } from '../settings';
@@ -22,10 +23,6 @@ const DISTRACTOR_STEPS = [0, 2, 4];
 const SOUND_STEPS: SoundMode[] = ['on', 'effects', 'off'];
 const SOUND_LABELS: Record<SoundMode, string> = { on: 'Açık', effects: 'Okuma kapalı', off: 'Sessiz' };
 const CREATURE_STEPS = [4, 6, 8];
-
-/** Kelime/cümle kaynakları; her bölümde iki kaynaktan en az biri açık kalır. */
-type Source = 'useTable' | 'useMine' | 'sentBuiltIn' | 'sentMine';
-const PARTNER: Record<Source, Source> = { useTable: 'useMine', useMine: 'useTable', sentBuiltIn: 'sentMine', sentMine: 'sentBuiltIn' };
 
 interface OptionDef {
   title: string;
@@ -125,6 +122,8 @@ export class MenuScene implements Scene {
   view = new Container();
   private body = new Container();
   private offVoices: () => void;
+  /** Kaydırılan listelerin konumu; menü yeniden çizilince kaldığı yerden devam eder. */
+  private scrolled: Record<string, number> = {};
 
   constructor(private game: Game) {
     const fs = new Button({ width: 68, height: 62, color: C.muted, outline: true, flat: true, icon: fullscreenIcon(C.muted), onTap: () => game.toggleFullscreen() });
@@ -166,16 +165,25 @@ export class MenuScene implements Scene {
       { tab: 'sort', text: 'Hece Sort', color: C.orange },
       { tab: 'sentence', text: 'Cümle Okuyorum', color: C.purple },
     ];
-    const seg = 340;
-    const h = 68;
-    const half = (seg * tabs.length) / 2;
+    this.segmented(
+      tabs.map((t) => ({ text: t.text, color: t.color, on: this.s.tab === t.tab, tap: () => (this.s.tab = t.tab) })),
+      W / 2,
+      60,
+      340,
+      68,
+      32,
+    );
+  }
+
+  /** Sekme çubuğu: seçili sekme beyaz zeminde; dokununca ayar değişir ve ekran yenilenir. */
+  private segmented(items: { text: string; color: number; on: boolean; tap: () => void }[], cx: number, cy: number, seg: number, h: number, fontSize: number) {
+    const half = (seg * items.length) / 2;
     const track = new Graphics().roundRect(-half, -h / 2, half * 2, h, h / 2).fill(0xeee4cf);
-    track.position.set(W / 2, 60);
+    track.position.set(cx, cy);
     this.body.addChild(track);
-    tabs.forEach((t, i) => {
-      const on = this.s.tab === t.tab;
+    items.forEach((t, i) => {
       const c = new Container();
-      if (on) {
+      if (t.on) {
         c.addChild(
           new Graphics()
             .roundRect(-seg / 2 + 6, -h / 2 + 9, seg - 12, h - 12, (h - 12) / 2)
@@ -186,13 +194,13 @@ export class MenuScene implements Scene {
       } else {
         c.addChild(new Graphics().rect(-seg / 2, -h / 2, seg, h).fill({ color: 0xffffff, alpha: 0.001 }));
       }
-      c.addChild(label(t.text, 32, on ? t.color : C.muted, { fontWeight: on ? '700' : '400' }));
-      c.position.set(W / 2 - half + (i + 0.5) * seg, 60);
+      c.addChild(label(t.text, fontSize, t.on ? t.color : C.muted, { fontWeight: t.on ? '700' : '400' }));
+      c.position.set(cx - half + (i + 0.5) * seg, cy);
       this.body.addChild(
         tappable(c, () => {
-          if (on) return;
+          if (t.on) return;
           sfx.click();
-          this.change(() => (this.s.tab = t.tab));
+          this.change(t.tap);
         }),
       );
     });
@@ -208,8 +216,7 @@ export class MenuScene implements Scene {
     this.drawListCard({
       x: 1270,
       w: 590,
-      title: 'Benim kelimelerim',
-      source: 'useMine',
+      top: -65,
       count: `${words.length} / ${total} kelime seçili`,
       preview: words.map((w) => w.syllables.join('-')),
       separator: '   ',
@@ -272,8 +279,7 @@ export class MenuScene implements Scene {
     this.drawListCard({
       x: 1270,
       w: 590,
-      title: 'Benim kelimelerim',
-      source: 'useMine',
+      top: -65,
       count: `${fit.length} uygun kelime`,
       preview: fit.map((w) => lowerTr(w.syllables.join('-'))),
       separator: '   ',
@@ -317,33 +323,47 @@ export class MenuScene implements Scene {
 
   private drawSentenceTab() {
     const s = this.s;
-    // İki eşit kart: hazır fiş cümleleri ve öğretmenin cümleleri (ikisi açıksa tek havuz).
-    const short = (x: string) => (x.length > 44 ? x.slice(0, 43) + '…' : x);
-    const builtIn = sentencesOf(s.sentSets);
-    const body = this.drawListCard({
+    // İki kart, başlıksız: solda hazır cümle grupları, sağda öğretmenin cümleleri.
+    // Seçili gruplar ve işaretli kendi cümleleri aynı havuzda karışır.
+    const ready = sentencesOf(s.sentSets);
+    const left = this.drawListCard({
       x: 60,
       w: 885,
-      title: 'Hazır cümleler',
-      source: 'sentBuiltIn',
-      count: `${s.sentSets.join(', ')} fiş${s.sentSets.length > 1 ? 'leri' : 'i'} · ${builtIn.length} cümle`,
-      preview: builtIn.map(short),
+      count: s.sentSets.length ? `${s.sentSets.join(' + ')} · ${ready.length} cümle` : '',
+      preview: ready,
       separator: '\n',
-      maxLines: 7,
-      top: 80,
-      empty: '',
+      scroll: 'ready',
+      top: 30,
+      empty: 'Bir ya da iki grup seçin.',
     });
-    this.drawSentenceSets(body);
+    // Grup düğmeleri (ANETİL 40 cümle, OKURIM 48 cümle), birden çok seçilebilir.
+    SENTENCE_SETS.forEach((set, i) => {
+      const bw = 380;
+      const on = s.sentSets.includes(set.name);
+      const b = new Button({
+        width: bw,
+        height: 64,
+        radius: 20,
+        color: GROUP_COLORS[set.group],
+        soft: !on,
+        text: `${set.name} · ${set.sentences.length} cümle`,
+        fontSize: 30,
+        onTap: () => this.toggleSentenceSet(set.name),
+      });
+      b.position.set(60 + 442.5 + (i - 0.5) * (bw + 24), CARD_Y + 66);
+      left.addChild(b);
+    });
+
     const total = parseCustomSentences(s.customSentences).sentences.length;
-    const sentences = mySentences(s);
+    const mine = mySentences(s);
     this.drawListCard({
       x: 975,
       w: 885,
-      title: 'Benim cümlelerim',
-      source: 'sentMine',
-      count: `${sentences.length} / ${total} cümle seçili`,
-      preview: sentences.map(short),
+      count: `${mine.length} / ${total} cümle seçili`,
+      preview: mine,
       separator: '\n',
-      maxLines: 7,
+      scroll: 'mine',
+      top: -65,
       empty: total
         ? `${total} cümle kayıtlı, hiçbiri seçili değil.`
         : 'Okutmak istediğiniz cümleleri yazın;\nkayıtlı kalır, istediğinizi seçersiniz.',
@@ -381,39 +401,42 @@ export class MenuScene implements Scene {
 
   // --- Ortak parçalar ---
 
-  /** Kart çerçevesi ve başlıktaki onay kutusu; içeriğin ekleneceği katmanı döner. */
-  private card(x: number, w: number, on: boolean, title: string, toggle: () => void): Container {
+  /** Başlıksız kart çerçevesi; içeriğin ekleneceği katmanı döner. */
+  private card(x: number, w: number): Container {
     const bg = new Graphics();
     bg.roundRect(x, CARD_Y + 5, w, CARD_H, 32).fill({ color: 0x000000, alpha: 0.05 });
     bg.roundRect(x, CARD_Y, w, CARD_H, 32).fill(C.white).stroke({ width: 3, color: C.line });
-    const head = checkRow(title, on, 44, 36, true, toggle);
-    head.position.set(x + 40, CARD_Y + 54);
     const content = new Container();
-    content.alpha = on ? 1 : 0.4;
-    this.body.addChild(bg, head, content);
+    this.body.addChild(bg, content);
     return content;
   }
 
   /** Harf tabloları. Hece Sort'ta harfler küçük yazılır ve özel isim satırı yoktur. */
   private drawTableCard(sort = false) {
     const s = this.s;
-    const body = this.card(60, 1180, s.useTable, 'Harf tablosu kelimeleri', () => this.toggleSource('useTable'));
+    const body = this.card(60, 1180);
 
     CURRICULUM.forEach((group, gi) => {
-      const y = CARD_Y + 135 + gi * 74;
+      const y = CARD_Y + 70 + gi * 80;
       const color = GROUP_COLORS[gi];
-      // Grup adına dokunmak gruptaki tüm tabloları seçer (hepsi seçiliyse kaldırır).
-      const name = label(group.name, 25, mix(color, C.muted, 0.5), { fontWeight: '400' });
-      name.anchor.set(0, 0.5);
-      name.position.set(100, y);
-      body.addChild(
-        tappable(name, () => {
-          sfx.click();
-          this.toggleTables(group.tables.map((t) => t.order));
-        }),
-      );
+      // Grup düğmesi gruptaki tüm tabloları birden seçer (hepsi seçiliyse kaldırır).
+      const orders = group.tables.map((t) => t.order);
+      const allOn = orders.every((o) => s.tables.includes(o));
+      const name = new Button({
+        width: 172,
+        height: 56,
+        radius: 18,
+        color,
+        outline: !allOn,
+        flat: true,
+        text: sort ? lowerTr(group.name) : group.name,
+        fontSize: 22,
+        onTap: () => this.toggleTables(orders),
+      });
+      name.position.set(100 + 86, y);
+      body.addChild(name);
 
-      let x = 290;
+      let x = 296;
       for (const t of group.tables) {
         const w = t.label.length > 2 ? 168 : 76;
         const on = s.tables.includes(t.order);
@@ -435,7 +458,7 @@ export class MenuScene implements Scene {
 
     const y = CARD_Y + CARD_H - 50;
     if (sort) {
-      const note = label('Yalnız iki heceli kelimeler · özel isim yok', 26, C.muted, { fontWeight: '400' });
+      const note = label('Yalnız iki heceli kelimeler, özel isim yok', 24, C.muted, { fontWeight: '400' });
       note.anchor.set(0, 0.5);
       note.position.set(100, y);
       body.addChild(note);
@@ -446,7 +469,7 @@ export class MenuScene implements Scene {
       proper.position.set(100, y);
       body.addChild(proper);
     }
-    const hint = label('Birden çok seçilebilir · grup adı hepsini seçer', 22, C.muted, { fontWeight: '400' });
+    const hint = label(sort ? 'Grup düğmesi hepsini seçer' : 'Birden çok seçilebilir · grup düğmesi hepsini seçer', 22, C.muted, { fontWeight: '400' });
     hint.anchor.set(1, 0.5);
     hint.position.set(1196, y);
     body.addChild(hint);
@@ -456,14 +479,14 @@ export class MenuScene implements Scene {
   private drawListCard(o: {
     x: number;
     w: number;
-    title: string;
-    source: Source;
     count: string;
     preview: string[];
     separator: string;
     maxLines?: number;
     /** Sayaç ve önizlemenin ne kadar aşağıdan başlayacağı (üstte başka satır varsa). */
     top?: number;
+    /** Verilirse önizleme kısaltılmaz: hepsi kaydırılabilir listede (konum bu adla saklanır). */
+    scroll?: string;
     empty: string;
     button?: string;
     edit?: () => void;
@@ -471,16 +494,28 @@ export class MenuScene implements Scene {
     const { x, w } = o;
     const cx = x + w / 2;
     const top = o.top ?? 0;
-    const body = this.card(x, w, this.s[o.source], o.title, () => this.toggleSource(o.source));
+    const body = this.card(x, w);
 
     if (o.preview.length) {
       const n = label(o.count, 34, C.ink);
       n.position.set(cx, CARD_Y + 135 + top);
-      const preview = label('', 28, C.muted, { fontWeight: '400', lineHeight: 42 });
-      preview.text = wrapItems(preview, o.preview, o.separator, w - 90, o.maxLines ?? 5);
-      preview.anchor.set(0.5, 0);
-      preview.position.set(cx, CARD_Y + 180 + top);
-      body.addChild(n, preview);
+      const key = o.scroll;
+      if (key) {
+        const y = CARD_Y + 180 + top;
+        const bottom = o.button ? CARD_Y + CARD_H - 115 : CARD_Y + CARD_H - 30;
+        const list = new ScrollList(o.preview, w - 80, bottom - y, {
+          offset: this.scrolled[key],
+          onScroll: (v) => (this.scrolled[key] = v),
+        });
+        list.position.set(x + 40, y);
+        body.addChild(n, list);
+      } else {
+        const preview = label('', 28, C.muted, { fontWeight: '400', lineHeight: 42 });
+        preview.text = wrapItems(preview, o.preview, o.separator, w - 90, o.maxLines ?? 5);
+        preview.anchor.set(0.5, 0);
+        preview.position.set(cx, CARD_Y + 180 + top);
+        body.addChild(n, preview);
+      }
     } else {
       const hint = label(o.empty, 28, C.muted, { fontWeight: '400', lineHeight: 42 });
       hint.position.set(cx, CARD_Y + 270 + top);
@@ -493,29 +528,6 @@ export class MenuScene implements Scene {
     edit.position.set(cx, CARD_Y + CARD_H - 65);
     this.body.addChild(edit);
     return body;
-  }
-
-  /** Hazır cümle fişleri: harf tablosu düğmeleri gibi, birden çok seçilebilir. */
-  private drawSentenceSets(body: Container) {
-    const y = CARD_Y + 140;
-    let x = 100;
-    for (const set of SENTENCE_SETS) {
-      const w = set.name.length > 2 ? 168 : 76;
-      const on = this.s.sentSets.includes(set.name);
-      const b = new Button({
-        width: w,
-        height: 56,
-        radius: 18,
-        color: GROUP_COLORS[set.group],
-        soft: !on,
-        text: set.name,
-        fontSize: 32,
-        onTap: () => this.toggleSentenceSet(set.name),
-      });
-      b.position.set(x + w / 2, y);
-      x += w + 10;
-      body.addChild(b);
-    }
   }
 
   /** Başlat'ın yanındaki "Adres Ver": bu ayarlarla açılan play.html adresini gösterir. */
@@ -570,55 +582,30 @@ export class MenuScene implements Scene {
     if (voice) tappable(row, () => this.nextVoice());
   }
 
-  /**
-   * Tabloları seçer ya da kaldırır: hepsi seçiliyse kaldırır, değilse hepsini
-   * seçer. Tablo kartı kapalıysa açar; son seçili tablo kaldırılamaz.
-   */
+  /** Tabloları seçer ya da kaldırır: hepsi seçiliyse kaldırır, değilse hepsini seçer (hiçbiri seçili olmayabilir). */
   private toggleTables(orders: number[]) {
     const s = this.s;
-    const allOn = s.useTable && orders.every((o) => s.tables.includes(o));
+    const allOn = orders.every((o) => s.tables.includes(o));
     const rest = s.tables.filter((o) => !orders.includes(o));
-    if (allOn && rest.length === 0) return sfx.wrong();
     this.change(() => {
       s.tables = allOn ? rest : [...rest, ...orders].sort((a, b) => a - b);
-      s.useTable = true;
     });
   }
 
-  /** Fişi seçer ya da kaldırır; kart kapalıysa açar, son seçili fiş kaldırılamaz. */
+  /** Hazır cümle grubunu seçer ya da kaldırır (hiçbiri seçili olmayabilir). */
   private toggleSentenceSet(name: string) {
     const s = this.s;
-    const on = s.sentBuiltIn && s.sentSets.includes(name);
-    const rest = s.sentSets.filter((n) => n !== name);
-    if (on && rest.length === 0) return sfx.wrong();
+    const on = s.sentSets.includes(name);
     this.change(() => {
-      s.sentSets = on ? rest : SENTENCE_SETS.map((x) => x.name).filter((n) => n === name || rest.includes(n));
-      s.sentBuiltIn = true;
+      s.sentSets = SENTENCE_SETS.map((x) => x.name).filter((n) => (n === name ? !on : s.sentSets.includes(n)));
     });
-  }
-
-  /** Kaynağı açar/kapar; bir bölümün iki kaynağı birden kapanamaz. */
-  private toggleSource(which: Source) {
-    const s = this.s;
-    // Seçili bir şey yokken açılırsa önce liste açılsın.
-    if (which === 'useMine' && !s.useMine && myWords(s).length === 0) return this.editWords();
-    if (which === 'sentMine' && !s.sentMine && mySentences(s).length === 0) return this.editSentences();
-    if (s[which] && !s[PARTNER[which]]) return sfx.wrong();
-    this.change(() => (s[which] = !s[which]));
-  }
-
-  /** Liste kaydedilince: seçili bir şey varsa o kaynağı aç, yoksa kapatıp diğerini aç. */
-  private saved(source: 'useMine' | 'sentMine', hasItems: boolean) {
-    const s = this.s;
-    s[source] = hasItems;
-    if (!hasItems) s[PARTNER[source]] = true;
   }
 
   private editWords() {
     const s = this.s;
     openListEditor({
       title: 'Benim kelimelerim',
-      help: 'Oyunda çıkmasını istediğiniz kelimeleri işaretleyin. Yeni kelimeleri boşluk, virgül ya da alt satırla ayırın; heceler kendiliğinden ayrılır, isterseniz kendiniz ayırın: kap-lum-ba-ğa',
+      help: 'Oyunda çıkmasını istediğiniz kelimeleri işaretleyin; seçili tabloların kelimeleriyle karışır. Yeni kelimeleri boşluk, virgül ya da alt satırla ayırın; heceler kendiliğinden ayrılır, isterseniz kendiniz ayırın: kap-lum-ba-ğa',
       placeholder: 'araba elma kalem …',
       items: parseCustomWords(s.customWords).words.map((w) => w.syllables.join('-')),
       off: s.wordsOff,
@@ -631,7 +618,6 @@ export class MenuScene implements Scene {
         this.change(() => {
           s.customWords = items.join(' ');
           s.wordsOff = off;
-          this.saved('useMine', items.length > off.length);
         }),
     });
   }
@@ -639,8 +625,8 @@ export class MenuScene implements Scene {
   private editSentences() {
     const s = this.s;
     openListEditor({
-      title: 'Benim cümlelerim',
-      help: 'Oyunda çıkmasını istediğiniz cümleleri işaretleyin. Yeni cümleleri her satıra bir tane yazın; hazır cümleler de açıksa aynı havuza eklenir.',
+      title: 'Kendi cümlelerim',
+      help: 'Oyunda çıkmasını istediğiniz cümleleri işaretleyin. Yeni cümleleri her satıra bir tane yazın; seçili hazır cümlelerle aynı havuza eklenir.',
       placeholder: 'Ali okula koştu.\nKedi süt içti.',
       items: parseCustomSentences(s.customSentences).sentences,
       off: s.sentOff,
@@ -653,7 +639,6 @@ export class MenuScene implements Scene {
         this.change(() => {
           s.customSentences = items.join('\n');
           s.sentOff = off;
-          this.saved('sentMine', items.length > off.length);
         }),
     });
   }

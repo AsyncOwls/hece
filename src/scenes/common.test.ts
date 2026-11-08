@@ -9,12 +9,13 @@ import { gameBank, gamePool, sentencePool, syllableBank } from './common';
 const base: Settings = { ...DEFAULTS, tables: [0] };
 
 describe('sentencePool', () => {
-  it('combines the built-in and teacher sentences, independent of the letter tables', () => {
-    const s = { ...base, tables: [20], sentMine: true, customSentences: 'Kedi süt içti.\nBalık yüzdü.\nTan nane at.' };
+  it('combines the chosen sheets and the teacher sentences, independent of the letter tables', () => {
+    const s = { ...base, tables: [20], sentSets: ['ANETİL'], customSentences: 'Kedi süt içti.\nBalık yüzdü.\nTan nane at.' };
     expect(sentencePool(s)).toEqual([...ANETIL, 'Kedi süt içti.', 'Balık yüzdü.']);
-    expect(sentencePool({ ...s, sentBuiltIn: false })).toEqual(['Kedi süt içti.', 'Balık yüzdü.', 'Tan nane at.']);
-    expect(sentencePool({ ...s, sentMine: false })).toEqual(ANETIL);
-    expect(sentencePool({ ...s, sentMine: false, sentSets: ['ANETİL', 'M'] })).toEqual([...ANETIL, ...SENTENCE_SETS[6].sentences]);
+    expect(sentencePool({ ...s, sentSets: [] })).toEqual(['Kedi süt içti.', 'Balık yüzdü.', 'Tan nane at.']);
+    expect(sentencePool({ ...s, customSentences: '' })).toEqual(ANETIL);
+    expect(sentencePool({ ...s, customSentences: '', sentSets: ['ANETİL', 'OKURIM'] })).toEqual([...ANETIL, ...SENTENCE_SETS[1].sentences]);
+    expect(sentencePool({ ...s, sentOff: ['kedi süt içti.', 'balık yüzdü.', 'tan nane at.'], sentSets: [] })).toEqual([]);
   });
 });
 
@@ -22,12 +23,10 @@ describe('teacher selections', () => {
   it('only uses the checked teacher words and sentences, keeping the rest saved', () => {
     const s = {
       ...base,
-      useTable: false,
-      useMine: true,
+      tables: [],
       customWords: 'araba kap-lum-ba-ğa elma',
       wordsOff: ['kaplumbağa'],
-      sentBuiltIn: false,
-      sentMine: true,
+      sentSets: [],
       customSentences: 'Ali okula koştu.\nKedi süt içti.',
       sentOff: ['kedi süt içti.'],
     };
@@ -48,7 +47,7 @@ describe('gamePool', () => {
   });
 
   it('adds the teacher words and draws distractors up to the furthest table', () => {
-    const s = { ...base, tables: [0, 7], useMine: true, customWords: 'kap-lum-ba-ğa' };
+    const s = { ...base, tables: [0, 7], customWords: 'kap-lum-ba-ğa' };
     expect(gamePool(s).map((w) => w.text)).toContain('kaplumbağa');
     const bank = gameBank(s);
     expect(bank).toEqual(expect.arrayContaining([...syllableBank(ALL_TABLES[7]), 'kap', 'ğa']));

@@ -9,13 +9,14 @@ yazılan kelimeler kullanılır; heceleme `src/data/syllabify.ts` içinde otomat
 
 ## Nasıl oynanır
 
-- **Öğretmen ekranı (menü):** İki kelime kaynağı var, ikisi ayrı ayrı açılıp kapanır:
-  - **Harf tablosu kelimeleri:** Bir ya da birden çok tablo seçilir; farklı ses gruplarından
-    karışık seçilebilir. Grup adına dokunmak gruptaki tüm tabloları seçer (hepsi seçiliyse kaldırır).
-  - **Benim kelimelerim:** Öğretmen kendi kelimelerini ekler; heceler kendiliğinden ayrılır,
+- **Öğretmen ekranı (menü):** Başlıksız iki kart vardır; ikisindeki seçimler aynı havuzda karışır:
+  - **Sol kart, harf tabloları:** Bir ya da birden çok tablo seçilir; farklı ses gruplarından
+    karışık seçilebilir. Satır başındaki "1. Ses Grubu" gibi grup düğmeleri gruptaki tüm tabloları birden seçer
+    (hepsi seçiliyse kaldırır); grubun hepsi seçiliyken düğme dolu görünür. Hiç tablo seçilmezse
+    yalnız öğretmenin kelimeleri oynanır.
+  - **Sağ kart, öğretmenin kelimeleri:** Öğretmen kendi kelimelerini ekler; heceler kendiliğinden ayrılır,
     istenirse tireyle elle verilir (`kap-lum-ba-ğa`). Kelimeler kayıtlı kalır; listeden oyunda
-    çıkacak olanlar işaretlenir, istenmeyenler silinir. Yalnız bu kart açıksa oyun yalnızca işaretli
-    kelimelerle, ikisi açıksa karışık oynanır.
+    çıkacak olanlar işaretlenir, istenmeyenler silinir.
 
   Altta fazladan hece, hedef kelime, hece rengi (Renkli / Tek renk) ve **Ses** (Açık / Okuma kapalı / Sessiz) ayarları vardır.
   Ses açıkken "Okuyan ses" satırından tarayıcıdaki Türkçe sesler denenip değiştirilebilir.
@@ -34,13 +35,13 @@ balıklar vardır. Hangi balığa dokunulursa dokunulsun havuzdan **yeni bir cü
 çocuk okuyup ✓'e basar. Havuzdaki cümleler bitene kadar hiçbiri tekrar gelmez, bitince "Aferin!" gelir.
 Ses açıksa hoparlör düğmesi cümleyi, cümledeki bir kelimeye dokunmak o kelimeyi okur.
 
-- **Hazır cümleler:** Öğretmenin verdiği fişlerdeki cümleler (`src/data/sentences.ts`): ANETİL fişi (40 cümle)
-  ve 2. ses grubunun O, K, U, R, I, M fişleri (8'er cümle). Kartın üstündeki fiş düğmelerinden biri ya da
-  birkaçı seçilir (harf tablosu düğmeleri gibi); seçilenlerin cümleleri tek havuzda karışır.
-  Harf tablosu seçiminden bağımsızdır.
-- **Benim cümlelerim:** Öğretmen her satıra bir cümle yazarak ekler. Cümleler kayıtlı kalır; listeden
-  oyunda çıkacak olanlar işaretlenir, istenmeyenler silinir. İkisi de açıksa işaretliler hazır cümlelerle
-  aynı havuzda karışır.
+Menüde başlıksız iki kart vardır; ikisindeki seçimler aynı havuzda karışır:
+
+- **Sol kart, hazır cümleler** (`src/data/sentences.ts`): iki grup düğmesi, **ANETİL** (40 cümle) ve **OKURIM**
+  (2. ses grubu fişleri O, K, U, R, I, M; 48 cümle). Biri, ikisi ya da hiçbiri seçilebilir; altında seçili
+  cümlelerin hepsi listelenir (liste parmakla/fareyle sürüklenerek ya da tekerlekle kaydırılır). Harf tablosu seçiminden bağımsızdır.
+- **Sağ kart, öğretmenin cümleleri:** "Cümle Yaz / Seç / Düzenle" ile her satıra bir cümle yazılır; kayıtlı
+  kalır, listeden oyunda çıkacak olanlar işaretlenir. Seçili cümlelerin hepsi kartta kaydırılabilir listede görünür.
 - Akvaryumdaki balık sayısı 4, 6 ya da 8 seçilebilir.
 
 ### Hece Sort (deneme)

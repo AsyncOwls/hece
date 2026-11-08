@@ -24,6 +24,7 @@ interface Shared {
   sound: SoundMode;
   // Hece Birleştir
   tables?: number[];
+  /** Eski adresler: tablo kelimeleri kapalıysa false. */
   useTable?: boolean;
   words?: string[];
   proper?: boolean;
@@ -34,6 +35,7 @@ interface Shared {
   // Hece Sort (kelimeler Hece Birleştir ayarlarından)
   sortSize?: number;
   // Cümle Okuyorum
+  /** Eski adresler: hazır cümleler (o zaman yalnız ANETİL) açık mı. */
   sentBuiltIn?: boolean;
   sentSets?: string[];
   sentences?: string[];
@@ -43,13 +45,12 @@ interface Shared {
 function pack(s: Settings, mode: SharedMode): Shared {
   const base = { v: 1 as const, mode, sound: s.sound };
   if (mode === 'sentence') {
-    return { ...base, sentBuiltIn: s.sentBuiltIn, sentSets: s.sentSets, sentences: s.sentMine ? mySentences(s) : [], creatures: s.creatures };
+    return { ...base, sentSets: s.sentSets, sentences: mySentences(s), creatures: s.creatures };
   }
   return {
     ...base,
     tables: s.tables,
-    useTable: s.useTable,
-    words: s.useMine ? myWords(s).map((w) => w.syllables.join('-')) : [],
+    words: myWords(s).map((w) => w.syllables.join('-')),
     proper: s.proper,
     distractors: s.distractors,
     showWord: s.showWord,
@@ -104,25 +105,22 @@ export function decodeShared(data: string): SharedGame | null {
     : [];
   const words = strings(raw.words) ? raw.words : [];
   const sentences = strings(raw.sentences) ? raw.sentences : [];
-  const useTable = bool(raw.useTable, true) && tables.length > 0;
-  const sentBuiltIn = bool(raw.sentBuiltIn, true);
+  // Eski adreslerde tablo kelimeleri kapatılabiliyordu.
+  const chosen = bool(raw.useTable, true) ? tables : [];
+  // Eski adreslerde fiş listesi yok: hazır cümleler açıksa yalnız ANETİL vardı.
+  const sets = Array.isArray(raw.sentSets) ? validSentenceSets(raw.sentSets) : bool(raw.sentBuiltIn, true) ? ['ANETİL'] : [];
   const settings: Settings = {
     ...DEFAULTS,
     tab: mode,
     sound: raw.sound === 'effects' || raw.sound === 'off' ? raw.sound : 'on',
-    tables: tables.length ? tables : DEFAULTS.tables,
-    useTable,
-    useMine: words.length > 0,
+    tables: chosen.length || words.length ? chosen : DEFAULTS.tables,
     customWords: words.join(' '),
     proper: bool(raw.proper, DEFAULTS.proper),
     distractors: int(raw.distractors, DEFAULTS.distractors, 0, 4),
     showWord: bool(raw.showWord, DEFAULTS.showWord),
     oneColor: bool(raw.oneColor, DEFAULTS.oneColor),
     roundSize: int(raw.roundSize, DEFAULTS.roundSize, 1, 50),
-    sentBuiltIn: sentBuiltIn || sentences.length === 0,
-    // Eski adreslerde fiş yok: o zaman yalnız ANETİL vardı (varsayılan).
-    sentSets: validSentenceSets(raw.sentSets),
-    sentMine: sentences.length > 0,
+    sentSets: sets.length || sentences.length ? sets : ['ANETİL'],
     customSentences: sentences.join('\n'),
     creatures: int(raw.creatures, DEFAULTS.creatures, 1, 8),
     sortSize: sortSize(int(raw.sortSize, DEFAULTS.sortSize, 2, 6)),
