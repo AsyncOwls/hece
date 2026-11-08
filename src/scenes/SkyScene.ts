@@ -88,7 +88,7 @@ export class SkyScene implements Scene {
 
   private slots: CloudSlot[] = [];
   private cards: SyllableCard[] = [];
-  private dragger: Dragger;
+  private dragger: Dragger<SyllableCard>;
   private done = false;
   private finished = false;
   private alive = true;

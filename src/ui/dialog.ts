@@ -1,6 +1,6 @@
 const CSS = `
 .le-overlay { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
-  background: rgba(31, 42, 68, 0.45); font-family: Andika, sans-serif; color: #1f2a44; touch-action: auto; }
+  background: rgba(31, 42, 68, 0.45); font-family: Comfortaa, sans-serif; color: #1f2a44; touch-action: auto; }
 .le-box { width: min(1000px, 92vw); max-height: 94vh; box-sizing: border-box; padding: 28px 36px;
   display: flex; flex-direction: column; gap: 14px; background: #fdf6e3; border-radius: 28px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }

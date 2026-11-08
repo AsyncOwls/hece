@@ -108,7 +108,7 @@ export function hills(): Graphics {
   return g;
 }
 
-const RAINBOW = [0xe53935, 0xfb8c00, 0xfdd835, 0x43a047, 0x1e88e5, 0x3949ab, 0x8e24aa];
+export const RAINBOW = [0xe53935, 0xfb8c00, 0xfdd835, 0x43a047, 0x1e88e5, 0x3949ab, 0x8e24aa];
 
 /** Soldan sağa doğru çizilerek beliren gökkuşağı. */
 export class Rainbow extends Graphics {

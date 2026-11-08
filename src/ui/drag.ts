@@ -1,28 +1,27 @@
 import type { Container, FederatedPointerEvent } from 'pixi.js';
-import type { SyllableCard } from './SyllableCard';
 import { killTweens, tween } from '../tween';
 import { sfx } from '../audio';
 
-export interface DragCallbacks {
-  canDrag(card: SyllableCard): boolean;
+export interface DragCallbacks<T extends Container> {
+  canDrag(card: T): boolean;
   /** Sürüklemeden dokunuldu. */
-  onTap(card: SyllableCard): void;
+  onTap(card: T): void;
   /** Sürükleme bitti; kart şu an bırakıldığı yerde. */
-  onDrop(card: SyllableCard): void;
-  onMove?(card: SyllableCard): void;
+  onDrop(card: T): void;
+  onMove?(card: T): void;
 }
 
 /** Akıllı tahtada tek parmakla sürükleme: aynı anda tek kart. */
-export class Dragger {
-  private active?: { card: SyllableCard; id: number; ox: number; oy: number; sx: number; sy: number; moved: boolean };
+export class Dragger<T extends Container> {
+  private active?: { card: T; id: number; ox: number; oy: number; sx: number; sy: number; moved: boolean };
 
   constructor(
     private space: Container,
     private layer: Container,
-    private cb: DragCallbacks,
+    private cb: DragCallbacks<T>,
   ) {}
 
-  attach(card: SyllableCard) {
+  attach(card: T) {
     card.on('pointerdown', (e) => this.down(card, e));
     card.on('globalpointermove', (e) => this.move(card, e));
     card.on('pointerup', (e) => this.up(card, e));
@@ -33,7 +32,7 @@ export class Dragger {
     return this.active?.card ?? null;
   }
 
-  private down(card: SyllableCard, e: FederatedPointerEvent) {
+  private down(card: T, e: FederatedPointerEvent) {
     if (this.active || !this.cb.canDrag(card)) return;
     killTweens(card);
     const p = this.space.toLocal(e.global);
@@ -44,7 +43,7 @@ export class Dragger {
     void tween(card, { scale: 1.08 }, 100);
   }
 
-  private move(card: SyllableCard, e: FederatedPointerEvent) {
+  private move(card: T, e: FederatedPointerEvent) {
     const a = this.active;
     if (!a || a.card !== card || e.pointerId !== a.id) return;
     const p = this.space.toLocal(e.global);
@@ -55,7 +54,7 @@ export class Dragger {
     }
   }
 
-  private up(card: SyllableCard, e: FederatedPointerEvent) {
+  private up(card: T, e: FederatedPointerEvent) {
     const a = this.active;
     if (!a || a.card !== card || e.pointerId !== a.id) return;
     this.active = undefined;

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_TABLES } from '../data/curriculum';
-import { SENTENCES } from '../data/sentences';
+import { SENTENCE_SETS } from '../data/sentences';
+
+const ANETIL = SENTENCE_SETS[0].sentences;
 import { DEFAULTS, type Settings } from '../settings';
 import { gameBank, gamePool, sentencePool, syllableBank } from './common';
 
@@ -9,9 +11,10 @@ const base: Settings = { ...DEFAULTS, tables: [0] };
 describe('sentencePool', () => {
   it('combines the built-in and teacher sentences, independent of the letter tables', () => {
     const s = { ...base, tables: [20], sentMine: true, customSentences: 'Kedi süt içti.\nBalık yüzdü.\nTan nane at.' };
-    expect(sentencePool(s)).toEqual([...SENTENCES, 'Kedi süt içti.', 'Balık yüzdü.']);
+    expect(sentencePool(s)).toEqual([...ANETIL, 'Kedi süt içti.', 'Balık yüzdü.']);
     expect(sentencePool({ ...s, sentBuiltIn: false })).toEqual(['Kedi süt içti.', 'Balık yüzdü.', 'Tan nane at.']);
-    expect(sentencePool({ ...s, sentMine: false })).toEqual(SENTENCES);
+    expect(sentencePool({ ...s, sentMine: false })).toEqual(ANETIL);
+    expect(sentencePool({ ...s, sentMine: false, sentSets: ['ANETİL', 'M'] })).toEqual([...ANETIL, ...SENTENCE_SETS[6].sentences]);
   });
 });
 

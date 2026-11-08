@@ -34,16 +34,36 @@ balıklar vardır. Hangi balığa dokunulursa dokunulsun havuzdan **yeni bir cü
 çocuk okuyup ✓'e basar. Havuzdaki cümleler bitene kadar hiçbiri tekrar gelmez, bitince "Aferin!" gelir.
 Ses açıksa hoparlör düğmesi cümleyi, cümledeki bir kelimeye dokunmak o kelimeyi okur.
 
-- **Hazır cümleler:** Öğretmenin verdiği fişlerdeki cümleler (şu an ANETİL fişi, 40 cümle;
-  `src/data/sentences.ts`). Harf tablosu seçiminden bağımsızdır.
+- **Hazır cümleler:** Öğretmenin verdiği fişlerdeki cümleler (`src/data/sentences.ts`): ANETİL fişi (40 cümle)
+  ve 2. ses grubunun O, K, U, R, I, M fişleri (8'er cümle). Kartın üstündeki fiş düğmelerinden biri ya da
+  birkaçı seçilir (harf tablosu düğmeleri gibi); seçilenlerin cümleleri tek havuzda karışır.
+  Harf tablosu seçiminden bağımsızdır.
 - **Benim cümlelerim:** Öğretmen her satıra bir cümle yazarak ekler. Cümleler kayıtlı kalır; listeden
   oyunda çıkacak olanlar işaretlenir, istenmeyenler silinir. İkisi de açıksa işaretliler hazır cümlelerle
   aynı havuzda karışır.
 - Akvaryumdaki balık sayısı 4, 6 ya da 8 seçilebilir.
 
+### Hece Sort (deneme)
+
+Menünün üstündeki **Hece Sort** sekmesinden açılır. Harf tabloları ve "Benim kelimelerim" Hece Birleştir ile
+aynıdır, ama bu bölümde büyük harf hiç görünmez (tablo düğmeleri küçük harfle yazılır) ve özel isim seçeneği
+yoktur: yalnız iki heceli, özel isim olmayan kelimeler kullanılır. **Tahta** ayarı 2×2, 4×4 ya da 6×6'dır;
+**Oyunu Başlat** bu ekranda açar, **Adres Ver** paylaşır. Kelime yetmezse tekrar eder.
+
+Tahtada karışık heceler vardır. Çocuk iki bloğun yerini değiştirir (sürükleyerek ya da sırayla iki bloğa dokunarak).
+Aynı satırda yan yana gelen iki hece kelime olunca bloklar birleşir, renklenir ve yerinde sabit kalır. Yalnız tahtaya
+konan kelimeler değil, seçili tablolara kadar okunabilen her iki heceli kelime kabul edilir (ör. "anten" ve "nane"nin
+hecelerinden "anne"). Kelimeler soldan sağa okunduğu için yalnız satır içinde kurulur; bu yüzden tahta hep çifttir ve her satır tam
+kelimelere bölünür. Ortada kurulan bir kelime satırı tıkayacaksa (4'lük satırda 2-3. sütunlar gibi) blok kenara kayar. Tahta dolunca ya da kalan
+hecelerle artık kelime kurulamıyorsa "Aferin!" gelir.
+
+Oyun gökyüzünde geçer. Heceler beyaz balonlardır; kelime kurulunca iki balon su damlası gibi birbirine akıp
+şeker gibi uzun, parlak tek bir balon olur ve jöle gibi sallanır. Kelime balonları sırayla gökkuşağının
+renklerini alır, oyun bitince büyük gökkuşağı çıkar.
+
 ### Adres Ver (paylaşılan oyun)
 
-"Oyunu Başlat" / "Akvaryum" düğmesinin yanındaki **Adres Ver**, o anki bölümün ayarlarını ve öğretmenin
+Her bölümdeki "Oyunu Başlat" / "Akvaryum" düğmesinin yanındaki **Adres Ver**, o anki bölümün ayarlarını ve öğretmenin
 işaretli kelime/cümlelerini tek bir adrese gömer: `play.html?data=…` (veri, URL'ye uygun base64'te JSON).
 Adresi açan kişi öğretmen menüsünü görmeden, büyük ▶ düğmesine dokunarak doğrudan o oyunu oynar; çark ve
 Esc menüye götürmez. Bu sayfa hiçbir şey kaydetmez (öğretmenin tarayıcısındaki kayıtlar etkilenmez).

@@ -2,15 +2,25 @@ import { ALL_TABLES } from './data/curriculum';
 import { DEFAULTS, type Settings } from './settings';
 import type { SoundMode } from './audio';
 import { mySentences, myWords } from './scenes/common';
+import { sortSize } from './data/sort';
+import { validSentenceSets } from './data/sentences';
 
 /**
  * Paylaşılan oyun adresi (play.html?data=…) içindeki veri. Yalnızca seçili
  * bölümün ayarları ve öğretmenin işaretli kelime/cümleleri girer; okuma sesi
  * cihaza özel olduğu için girmez.
  */
+/** Paylaşılan adresin açacağı oyun. */
+export type SharedMode = Settings['tab'];
+
+export interface SharedGame {
+  mode: SharedMode;
+  settings: Settings;
+}
+
 interface Shared {
   v: 1;
-  mode: Settings['tab'];
+  mode: SharedMode;
   sound: SoundMode;
   // Hece Birleştir
   tables?: number[];
@@ -21,16 +31,19 @@ interface Shared {
   showWord?: boolean;
   oneColor?: boolean;
   roundSize?: number;
+  // Hece Sort (kelimeler Hece Birleştir ayarlarından)
+  sortSize?: number;
   // Cümle Okuyorum
   sentBuiltIn?: boolean;
+  sentSets?: string[];
   sentences?: string[];
   creatures?: number;
 }
 
-function pack(s: Settings): Shared {
-  const base = { v: 1 as const, mode: s.tab, sound: s.sound };
-  if (s.tab === 'sentence') {
-    return { ...base, sentBuiltIn: s.sentBuiltIn, sentences: s.sentMine ? mySentences(s) : [], creatures: s.creatures };
+function pack(s: Settings, mode: SharedMode): Shared {
+  const base = { v: 1 as const, mode, sound: s.sound };
+  if (mode === 'sentence') {
+    return { ...base, sentBuiltIn: s.sentBuiltIn, sentSets: s.sentSets, sentences: s.sentMine ? mySentences(s) : [], creatures: s.creatures };
   }
   return {
     ...base,
@@ -42,6 +55,7 @@ function pack(s: Settings): Shared {
     showWord: s.showWord,
     oneColor: s.oneColor,
     roundSize: s.roundSize,
+    ...(mode === 'sort' ? { sortSize: s.sortSize } : {}),
   };
 }
 
@@ -58,13 +72,14 @@ function fromBase64Url(data: string): string {
   return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
 
-export const encodeShared = (s: Settings) => toBase64Url(JSON.stringify(pack(s)));
+/** `mode` verilmezse menüde açık bölüm. */
+export const encodeShared = (s: Settings, mode: SharedMode = s.tab) => toBase64Url(JSON.stringify(pack(s, mode)));
 
 /** Paylaşılan oyunun adresi; öğretmen sayfasının yanındaki play.html. */
-export function shareUrl(s: Settings, from = location.href): string {
+export function shareUrl(s: Settings, from = location.href, mode: SharedMode = s.tab): string {
   const url = new URL('play.html', from);
   url.search = '';
-  url.searchParams.set('data', encodeShared(s));
+  url.searchParams.set('data', encodeShared(s, mode));
   return url.toString();
 }
 
@@ -73,15 +88,16 @@ const bool = (x: unknown, d: boolean) => (typeof x === 'boolean' ? x : d);
 const int = (x: unknown, d: number, min: number, max: number) =>
   Number.isInteger(x) && (x as number) >= min && (x as number) <= max ? (x as number) : d;
 
-/** Adresteki veriyi oyun ayarlarına çevirir; bozuksa null. */
-export function decodeShared(data: string): Settings | null {
+/** Adresteki veriyi oyuna ve ayarlarına çevirir; bozuksa null. */
+export function decodeShared(data: string): SharedGame | null {
   let raw: Partial<Shared>;
   try {
     raw = JSON.parse(fromBase64Url(data));
   } catch {
     return null;
   }
-  if (!raw || raw.v !== 1 || (raw.mode !== 'syllable' && raw.mode !== 'sentence')) return null;
+  if (!raw || raw.v !== 1 || (raw.mode !== 'syllable' && raw.mode !== 'sentence' && raw.mode !== 'sort')) return null;
+  const mode = raw.mode;
 
   const tables = Array.isArray(raw.tables)
     ? raw.tables.filter((n) => Number.isInteger(n) && n >= 0 && n < ALL_TABLES.length)
@@ -90,9 +106,9 @@ export function decodeShared(data: string): Settings | null {
   const sentences = strings(raw.sentences) ? raw.sentences : [];
   const useTable = bool(raw.useTable, true) && tables.length > 0;
   const sentBuiltIn = bool(raw.sentBuiltIn, true);
-  return {
+  const settings: Settings = {
     ...DEFAULTS,
-    tab: raw.mode,
+    tab: mode,
     sound: raw.sound === 'effects' || raw.sound === 'off' ? raw.sound : 'on',
     tables: tables.length ? tables : DEFAULTS.tables,
     useTable,
@@ -104,8 +120,12 @@ export function decodeShared(data: string): Settings | null {
     oneColor: bool(raw.oneColor, DEFAULTS.oneColor),
     roundSize: int(raw.roundSize, DEFAULTS.roundSize, 1, 50),
     sentBuiltIn: sentBuiltIn || sentences.length === 0,
+    // Eski adreslerde fiş yok: o zaman yalnız ANETİL vardı (varsayılan).
+    sentSets: validSentenceSets(raw.sentSets),
     sentMine: sentences.length > 0,
     customSentences: sentences.join('\n'),
     creatures: int(raw.creatures, DEFAULTS.creatures, 1, 8),
+    sortSize: sortSize(int(raw.sortSize, DEFAULTS.sortSize, 2, 6)),
   };
+  return { mode, settings };
 }

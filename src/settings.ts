@@ -1,8 +1,9 @@
 import type { SoundMode } from './audio';
+import { validSentenceSets } from './data/sentences';
 
 export interface Settings {
   /** Menüde açık bölüm. */
-  tab: 'syllable' | 'sentence';
+  tab: 'syllable' | 'sentence' | 'sort';
   /** Seçili tablolar (ALL_TABLES sırası); farklı ses gruplarından karışık olabilir. */
   tables: number[];
   /** Harf tablosunun kelimeleri kullanılsın. */
@@ -25,6 +26,8 @@ export interface Settings {
   roundSize: number;
   /** Cümle Okuyorum: seçili harflerle okunabilen hazır cümleler kullanılsın. */
   sentBuiltIn: boolean;
+  /** Cümle Okuyorum: seçili hazır fişler (SENTENCE_SETS adları, ör. 'ANETİL', 'O'). */
+  sentSets: string[];
   /** Cümle Okuyorum: öğretmenin kendi cümleleri kullanılsın. */
   sentMine: boolean;
   /** Öğretmenin kayıtlı cümleleri, her satırda bir tane. */
@@ -33,6 +36,8 @@ export interface Settings {
   sentOff: string[];
   /** Cümle Okuyorum'da akvaryumdaki balık sayısı. */
   creatures: number;
+  /** Hece Sort tahtasının boyutu (n×n; 2, 4 ya da 6). */
+  sortSize: number;
   sound: SoundMode;
   /** Seçilen okuma sesinin adı; boşsa en iyi Türkçe ses. */
   voice: string;
@@ -53,10 +58,12 @@ export const DEFAULTS: Settings = {
   oneColor: false,
   roundSize: 10,
   sentBuiltIn: true,
+  sentSets: ['ANETİL'],
   sentMine: false,
   customSentences: '',
   sentOff: [],
   creatures: 6,
+  sortSize: 4,
   sound: 'on',
   voice: '',
 };
@@ -71,7 +78,9 @@ export function loadSettings(): Settings {
     }
     delete saved.table;
     delete saved.cumulative;
-    return { ...DEFAULTS, ...saved };
+    const s: Settings = { ...DEFAULTS, ...saved };
+    s.sentSets = validSentenceSets(s.sentSets);
+    return s;
   } catch {
     return { ...DEFAULTS };
   }

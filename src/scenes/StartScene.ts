@@ -26,8 +26,15 @@ export class StartScene implements Scene {
     const play = new Button({ width: 260, height: 260, radius: 130, color: C.green, icon: playIcon(C.white, 70), onTap: () => this.go() });
     play.position.set(W / 2, 640);
     play.scale.set(0.3);
-    this.view.addChild(play);
+    const cta = label('Hadi oynayalım!', 64, C.green);
+    cta.position.set(W / 2, 850);
+    cta.alpha = 0;
+    cta.eventMode = 'static';
+    cta.cursor = 'pointer';
+    cta.on('pointertap', () => this.go());
+    this.view.addChild(play, cta);
     void tween(play, { scale: 1 }, 500, easeOutBack);
+    void tween(cta, { alpha: 1 }, 600);
   }
 
   private go() {

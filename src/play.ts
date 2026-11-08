@@ -4,6 +4,7 @@ import { decodeShared } from './share';
 import { DEFAULTS } from './settings';
 import { SentenceScene } from './scenes/SentenceScene';
 import { SkyScene } from './scenes/SkyScene';
+import { SortScene } from './scenes/SortScene';
 import { StartScene } from './scenes/StartScene';
 
 /**
@@ -13,13 +14,15 @@ import { StartScene } from './scenes/StartScene';
 async function start() {
   await loadFonts();
   const data = new URLSearchParams(location.search).get('data');
-  const settings = data ? decodeShared(data) : null;
-  const game = new Game({ settings: settings ?? DEFAULTS, persist: false });
+  const shared = data ? decodeShared(data) : null;
+  const game = new Game({ settings: shared?.settings ?? DEFAULTS, persist: false });
   await game.init();
 
-  if (!settings) {
+  if (!shared) {
     game.go((g) => new StartScene(g, 'Bu oyun adresi eksik ya da bozuk.\nÖğretmeninizden yeni bir adres isteyin.'));
-  } else if (settings.tab === 'sentence') {
+  } else if (shared.mode === 'sort') {
+    game.go((g) => new StartScene(g, 'Hece Sort', (g2) => new SortScene(g2)));
+  } else if (shared.mode === 'sentence') {
     game.go((g) => new StartScene(g, 'Cümle Okuyorum', (g2) => new SentenceScene(g2)));
   } else {
     game.go((g) => new StartScene(g, 'Hece Birleştir', (g2) => new SkyScene(g2)));

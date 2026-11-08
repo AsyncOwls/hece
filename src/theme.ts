@@ -4,7 +4,8 @@ import { Container, Text, type TextStyleOptions } from 'pixi.js';
 export const W = 1920;
 export const H = 1080;
 
-export const FONT = 'Andika';
+/** Çocuk yazısına yakın, tek katlı a ve g; Türkçe harflerin hepsi var. */
+export const FONT = 'Comfortaa';
 
 export const C = {
   bg: 0xfdf6e3,

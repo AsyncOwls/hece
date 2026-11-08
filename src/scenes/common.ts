@@ -1,6 +1,7 @@
-import { ALL_TABLES, wordPool, type Table, type Word } from '../data/curriculum';
+import { ALL_TABLES, dictionaryUpTo, wordPool, type Table, type Word } from '../data/curriculum';
+import { pairSet, twoSyllable } from '../data/sort';
 import { parseCustomWords } from '../data/custom';
-import { SENTENCES, parseCustomSentences } from '../data/sentences';
+import { parseCustomSentences, sentencesOf } from '../data/sentences';
 import { lowerTr } from '../data/syllabify';
 import type { Settings } from '../settings';
 
@@ -57,10 +58,25 @@ export function gameBank(s: Settings): string[] {
 
 /** Cümle Okuyorum havuzu: hazır cümleler ve/veya öğretmenin cümleleri (sırası sahnede karıştırılır). */
 export function sentencePool(s: Settings): string[] {
-  const builtIn = s.sentBuiltIn ? SENTENCES : [];
+  const builtIn = s.sentBuiltIn ? sentencesOf(s.sentSets) : [];
   return [...new Set([...builtIn, ...(s.sentMine ? mySentences(s) : [])])];
 }
 
 export function capitalizeTr(s: string) {
   return s.charAt(0).toLocaleUpperCase('tr-TR') + s.slice(1);
+}
+
+/** Hece Sort tahtasına konabilecek kelimeler: oyun havuzunun iki heceli, özel isim olmayanları. */
+export function sortWords(s: Settings): Word[] {
+  return twoSyllable(gamePool(s));
+}
+
+/**
+ * Hece Sort'ta birleşmesi kabul edilen kelimeler: tahtadakilerin yanında seçili en
+ * ileri tabloya kadar okunabilen tüm iki heceli kelimeler ve öğretmenin kelimeleri.
+ */
+export function sortPairs(s: Settings): Set<string> {
+  const last = selectedTables(s).at(-1);
+  const readable = s.useTable && last ? [...dictionaryUpTo(last, false).values()] : [];
+  return pairSet([...sortWords(s), ...readable, ...mine(s)]);
 }

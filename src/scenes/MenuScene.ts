@@ -1,8 +1,9 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Game, Scene } from '../game';
 import { CURRICULUM } from '../data/curriculum';
+import { SORT_SIZES, sortWordCount, twoSyllable } from '../data/sort';
 import { parseCustomWords } from '../data/custom';
-import { SENTENCE_SETS, SENTENCES, parseCustomSentences } from '../data/sentences';
+import { SENTENCE_SETS, parseCustomSentences, sentencesOf } from '../data/sentences';
 import { Button } from '../ui/Button';
 import { fishIcon, fullscreenIcon, playIcon } from '../ui/icons';
 import { openListEditor } from '../ui/ListEditor';
@@ -12,9 +13,10 @@ import { C, GROUP_COLORS, W, label, mix } from '../theme';
 import { lowerTr } from '../data/syllabify';
 import { currentVoice, onVoicesChanged, sfx, speak, turkishVoices, type SoundMode } from '../audio';
 import type { Settings } from '../settings';
-import { gamePool, mySentences, myWords, sentencePool } from './common';
+import { gamePool, mySentences, myWords, sentencePool, sortWords } from './common';
 import { SentenceScene } from './SentenceScene';
 import { SkyScene } from './SkyScene';
+import { SortScene } from './SortScene';
 
 const DISTRACTOR_STEPS = [0, 2, 4];
 const SOUND_STEPS: SoundMode[] = ['on', 'effects', 'off'];
@@ -148,6 +150,7 @@ export class MenuScene implements Scene {
     this.body.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.drawTabs();
     if (this.s.tab === 'syllable') this.drawSyllableTab();
+    else if (this.s.tab === 'sort') this.drawSortTab();
     else this.drawSentenceTab();
     this.drawVoiceRow();
     const hint = label('Oyundan çıkmak için sağ üstteki çarka basılı tutun (ya da Esc).', 24, C.muted, { fontWeight: '400' });
@@ -160,11 +163,13 @@ export class MenuScene implements Scene {
   private drawTabs() {
     const tabs: { tab: Settings['tab']; text: string; color: number }[] = [
       { tab: 'syllable', text: 'Hece Birleştir', color: C.red },
+      { tab: 'sort', text: 'Hece Sort', color: C.orange },
       { tab: 'sentence', text: 'Cümle Okuyorum', color: C.purple },
     ];
-    const seg = 320;
+    const seg = 340;
     const h = 68;
-    const track = new Graphics().roundRect(-seg, -h / 2, seg * 2, h, h / 2).fill(0xeee4cf);
+    const half = (seg * tabs.length) / 2;
+    const track = new Graphics().roundRect(-half, -h / 2, half * 2, h, h / 2).fill(0xeee4cf);
     track.position.set(W / 2, 60);
     this.body.addChild(track);
     tabs.forEach((t, i) => {
@@ -182,7 +187,7 @@ export class MenuScene implements Scene {
         c.addChild(new Graphics().rect(-seg / 2, -h / 2, seg, h).fill({ color: 0xffffff, alpha: 0.001 }));
       }
       c.addChild(label(t.text, 32, on ? t.color : C.muted, { fontWeight: on ? '700' : '400' }));
-      c.position.set(W / 2 + (i - 0.5) * seg, 60);
+      c.position.set(W / 2 - half + (i + 0.5) * seg, 60);
       this.body.addChild(
         tappable(c, () => {
           if (on) return;
@@ -253,23 +258,81 @@ export class MenuScene implements Scene {
     this.body.addChild(play, info);
   }
 
+  // --- Hece Sort ---
+
+  /**
+   * Hece Sort'un kendi bölümü: aynı kelime kaynakları, ama yalnız iki heceli ve
+   * özel isim olmayan kelimeler; büyük harf hiç görünmez.
+   */
+  private drawSortTab() {
+    const s = this.s;
+    this.drawTableCard(true);
+    const words = myWords(s);
+    const fit = twoSyllable(words);
+    this.drawListCard({
+      x: 1270,
+      w: 590,
+      title: 'Benim kelimelerim',
+      source: 'useMine',
+      count: `${fit.length} uygun kelime`,
+      preview: fit.map((w) => lowerTr(w.syllables.join('-'))),
+      separator: '   ',
+      empty: words.length
+        ? 'Seçili kelimelerden\niki heceli olan yok.'
+        : 'Kendi kelimelerinizi yazın;\nyalnız iki heceliler gelir.',
+      button: words.length ? 'Seç / Düzenle' : 'Kelime Yaz',
+      edit: () => this.editWords(),
+    });
+
+    this.drawOptions([
+      {
+        title: 'Tahta',
+        value: `${s.sortSize} × ${s.sortSize}`,
+        tap: () => (s.sortSize = SORT_SIZES[(SORT_SIZES.indexOf(s.sortSize) + 1) % SORT_SIZES.length]),
+      },
+      this.soundOption(),
+    ]);
+
+    const n = sortWords(s).length;
+    const need = sortWordCount(s.sortSize);
+    const play = new Button({
+      width: 370,
+      height: 100,
+      color: n > 0 ? C.green : C.line,
+      text: 'Oyunu Başlat',
+      fontSize: 42,
+      icon: playIcon(C.white, 17),
+      onTap: () => this.startSort(),
+    });
+    play.position.set(1455, OPTIONS_Y);
+    this.drawShare(n > 0, 'Hece Sort');
+    const text =
+      n === 0 ? 'Bu seçimle uygun kelime yok' : n < need ? `${n} uygun kelime var, bazıları tekrar eder` : `Bu seçimle ${n} uygun kelime var`;
+    const info = label(text, 26, n === 0 ? C.red : n < need ? C.orange : C.muted, { fontWeight: '400' });
+    info.position.set(1565, OPTIONS_Y + 88);
+    this.body.addChild(play, info);
+  }
+
   // --- Cümle Okuyorum ---
 
   private drawSentenceTab() {
     const s = this.s;
     // İki eşit kart: hazır fiş cümleleri ve öğretmenin cümleleri (ikisi açıksa tek havuz).
     const short = (x: string) => (x.length > 44 ? x.slice(0, 43) + '…' : x);
-    this.drawListCard({
+    const builtIn = sentencesOf(s.sentSets);
+    const body = this.drawListCard({
       x: 60,
       w: 885,
       title: 'Hazır cümleler',
       source: 'sentBuiltIn',
-      count: `${SENTENCE_SETS.map((x) => x.name).join(', ')} fişi · ${SENTENCES.length} cümle`,
-      preview: SENTENCES.map(short),
+      count: `${s.sentSets.join(', ')} fiş${s.sentSets.length > 1 ? 'leri' : 'i'} · ${builtIn.length} cümle`,
+      preview: builtIn.map(short),
       separator: '\n',
-      maxLines: 9,
+      maxLines: 7,
+      top: 80,
       empty: '',
     });
+    this.drawSentenceSets(body);
     const total = parseCustomSentences(s.customSentences).sentences.length;
     const sentences = mySentences(s);
     this.drawListCard({
@@ -331,8 +394,8 @@ export class MenuScene implements Scene {
     return content;
   }
 
-  /** Harf tabloları (Hece Birleştir kelimeleri). */
-  private drawTableCard() {
+  /** Harf tabloları. Hece Sort'ta harfler küçük yazılır ve özel isim satırı yoktur. */
+  private drawTableCard(sort = false) {
     const s = this.s;
     const body = this.card(60, 1180, s.useTable, 'Harf tablosu kelimeleri', () => this.toggleSource('useTable'));
 
@@ -360,7 +423,7 @@ export class MenuScene implements Scene {
           radius: 18,
           color,
           soft: !on,
-          text: t.label,
+          text: sort ? lowerTr(t.label) : t.label,
           fontSize: 32,
           onTap: () => this.toggleTables([t.order]),
         });
@@ -371,11 +434,18 @@ export class MenuScene implements Scene {
     });
 
     const y = CARD_Y + CARD_H - 50;
-    const proper = checkRow('Özel isimler (Ali, Lale…)', s.proper, 34, 28, false, () =>
-      this.change(() => (s.proper = !s.proper)),
-    );
-    proper.position.set(100, y);
-    body.addChild(proper);
+    if (sort) {
+      const note = label('Yalnız iki heceli kelimeler · özel isim yok', 26, C.muted, { fontWeight: '400' });
+      note.anchor.set(0, 0.5);
+      note.position.set(100, y);
+      body.addChild(note);
+    } else {
+      const proper = checkRow('Özel isimler (Ali, Lale…)', s.proper, 34, 28, false, () =>
+        this.change(() => (s.proper = !s.proper)),
+      );
+      proper.position.set(100, y);
+      body.addChild(proper);
+    }
     const hint = label('Birden çok seçilebilir · grup adı hepsini seçer', 22, C.muted, { fontWeight: '400' });
     hint.anchor.set(1, 0.5);
     hint.position.set(1196, y);
@@ -392,33 +462,60 @@ export class MenuScene implements Scene {
     preview: string[];
     separator: string;
     maxLines?: number;
+    /** Sayaç ve önizlemenin ne kadar aşağıdan başlayacağı (üstte başka satır varsa). */
+    top?: number;
     empty: string;
     button?: string;
     edit?: () => void;
-  }) {
+  }): Container {
     const { x, w } = o;
     const cx = x + w / 2;
+    const top = o.top ?? 0;
     const body = this.card(x, w, this.s[o.source], o.title, () => this.toggleSource(o.source));
 
     if (o.preview.length) {
       const n = label(o.count, 34, C.ink);
-      n.position.set(cx, CARD_Y + 135);
+      n.position.set(cx, CARD_Y + 135 + top);
       const preview = label('', 28, C.muted, { fontWeight: '400', lineHeight: 42 });
       preview.text = wrapItems(preview, o.preview, o.separator, w - 90, o.maxLines ?? 5);
       preview.anchor.set(0.5, 0);
-      preview.position.set(cx, CARD_Y + 180);
+      preview.position.set(cx, CARD_Y + 180 + top);
       body.addChild(n, preview);
     } else {
       const hint = label(o.empty, 28, C.muted, { fontWeight: '400', lineHeight: 42 });
-      hint.position.set(cx, CARD_Y + 270);
+      hint.position.set(cx, CARD_Y + 270 + top);
       body.addChild(hint);
     }
 
-    if (!o.button || !o.edit) return;
+    if (!o.button || !o.edit) return body;
     // Kart kapalıyken de soluk görünmesin: yazmak her zaman mümkün.
     const edit = new Button({ width: 280, height: 70, color: C.blue, outline: true, flat: true, text: o.button, fontSize: 32, onTap: o.edit });
     edit.position.set(cx, CARD_Y + CARD_H - 65);
     this.body.addChild(edit);
+    return body;
+  }
+
+  /** Hazır cümle fişleri: harf tablosu düğmeleri gibi, birden çok seçilebilir. */
+  private drawSentenceSets(body: Container) {
+    const y = CARD_Y + 140;
+    let x = 100;
+    for (const set of SENTENCE_SETS) {
+      const w = set.name.length > 2 ? 168 : 76;
+      const on = this.s.sentSets.includes(set.name);
+      const b = new Button({
+        width: w,
+        height: 56,
+        radius: 18,
+        color: GROUP_COLORS[set.group],
+        soft: !on,
+        text: set.name,
+        fontSize: 32,
+        onTap: () => this.toggleSentenceSet(set.name),
+      });
+      b.position.set(x + w / 2, y);
+      x += w + 10;
+      body.addChild(b);
+    }
   }
 
   /** Başlat'ın yanındaki "Adres Ver": bu ayarlarla açılan play.html adresini gösterir. */
@@ -485,6 +582,18 @@ export class MenuScene implements Scene {
     this.change(() => {
       s.tables = allOn ? rest : [...rest, ...orders].sort((a, b) => a - b);
       s.useTable = true;
+    });
+  }
+
+  /** Fişi seçer ya da kaldırır; kart kapalıysa açar, son seçili fiş kaldırılamaz. */
+  private toggleSentenceSet(name: string) {
+    const s = this.s;
+    const on = s.sentBuiltIn && s.sentSets.includes(name);
+    const rest = s.sentSets.filter((n) => n !== name);
+    if (on && rest.length === 0) return sfx.wrong();
+    this.change(() => {
+      s.sentSets = on ? rest : SENTENCE_SETS.map((x) => x.name).filter((n) => n === name || rest.includes(n));
+      s.sentBuiltIn = true;
     });
   }
 
@@ -561,6 +670,11 @@ export class MenuScene implements Scene {
     this.game.go((g) => new SkyScene(g));
   }
 
+  private startSort() {
+    if (sortWords(this.s).length === 0) return sfx.wrong();
+    this.game.go((g) => new SortScene(g));
+  }
+
   private startSentences() {
     if (sentencePool(this.s).length === 0) return sfx.wrong();
     this.game.go((g) => new SentenceScene(g));
@@ -569,6 +683,7 @@ export class MenuScene implements Scene {
   onKey(e: KeyboardEvent) {
     if (e.key !== 'Enter') return;
     if (this.s.tab === 'syllable') this.startSyllables();
+    else if (this.s.tab === 'sort') this.startSort();
     else this.startSentences();
   }
 
